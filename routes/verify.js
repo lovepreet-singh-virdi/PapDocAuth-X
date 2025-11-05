@@ -9,6 +9,11 @@ const upload = multer({ dest: "uploads/" });
 
 router.post("/", upload.single("file"), async (req, res) => {
     try {
+        console.log("Uploaded file:", req.file);
+
+        if (!req.file) {
+            return res.status(400).json({ error: "No file uploaded" });
+        }
         const text = await extractText(req.file.path);
         const hash = generateSHA256(text);
         const match = await Document.findOne({ textHash: hash });
