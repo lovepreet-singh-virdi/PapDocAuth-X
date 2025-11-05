@@ -1,0 +1,31 @@
+{
+  "name": "pap-doc-auth-x-backend",
+  "version": "1.0.0",
+  "description": "",
+  "homepage": "https://github.com/lovepreet-singh-virdi/PapDocAuth-X#readme",
+  "bugs": {
+    "url": "https://github.com/lovepreet-singh-virdi/PapDocAuth-X/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lovepreet-singh-virdi/PapDocAuth-X.git"
+  },
+  "license": "ISC",
+  "author": "lovepreet-singh-virdi",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "nodemon index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "crypto": "^1.0.1",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "mongoose": "^8.19.3",
+    "multer": "^2.0.2",
+    "nodemon": "^3.1.10",
+    "tesseract.js": "^6.0.1"
+  }
+}
