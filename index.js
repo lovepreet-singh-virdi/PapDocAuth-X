@@ -16,7 +16,7 @@ const MONGO_URI = process.env.MONGO_URI;
 
 mongoose
   .connect(MONGO_URI)
-  .then(() => console.log("✅ MongoDB Connected"))
+  .then(() => console.log("MongoDB Connected"))
   .catch((err) => console.log(" DB Error:", err));
 
 app.get("/", (req, res) => res.send("PapDocAuth-X API Running"));

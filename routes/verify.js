@@ -5,7 +5,17 @@ import { generateSHA256 } from "../utils/hashUtil.js";
 import Document from "../models/document.js";
 
 const router = express.Router();
-const upload = multer({ dest: "uploads/" });
+
+//"Multer for image-only verification
+const upload = multer({
+    dest: "uploads/",
+    fileFilter: (req, file, cb) => {
+        if (!file.mimetype.startsWith("image/")) {
+            return cb(new Error("Only image files are allowed for verification"));
+        }
+        cb(null, true);
+    }
+});
 
 router.post("/", upload.single("file"), async (req, res) => {
     try {
@@ -15,6 +25,8 @@ router.post("/", upload.single("file"), async (req, res) => {
         if (!req.file) {
             return res.status(400).json({ error: "No file uploaded" });
         }
+
+        // Extract text from image
         const text = await extractText(req.file.path);
         const hash = generateSHA256(text);
         const match = await Document.findOne({ textHash: hash });
@@ -33,10 +45,19 @@ router.post("/", upload.single("file"), async (req, res) => {
             });
         }
         return res.json({
-            status: "Modified / Unknown Document"
+            status: "Modified / Unknown Document",
+            file: req.file.originalname
         });
-    } catch (err) {
-        console.error(err);
+    } catch (error) {
+        console.error(error);
+        console.error("Verification Error:", error.message);
+
+        if (error.message.includes("Only image files")) {
+            return res.status(400).json({ error: error.message });
+        }
+        if (error.message.includes("Error attempting to read image")) {
+            return res.status(400).json({ error: "Error reading image — please upload a clear JPG or PNG" });
+        }
         res.status(500).json({ error: "Verification Error" });
     }
 });
