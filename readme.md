@@ -183,12 +183,11 @@ The server runs at: **http://localhost:4000**
 ---
 
 ## 👥 Contributors
-| Name                      | Role                          | Key Area                                       |
-| ------------------------- | ----------------------------- | ---------------------------------------------- |
-| **Lovepreet Singh Virdi** | Full-Stack Developer          | Backend architecture, hashing, and integration |
-| **Tusharbir Singh Mutty** | Database Engineer             | MongoDB Atlas setup, schema, and optimization  |
-| **Chirag**                | OCR & Front-End Developer     | OCR integration and UI preparation             |
-| **Nishchay**              | Testing & Feature Integration | Testing, validation, and QR module support     |
+| Name                     |
+| **Lovepreet Singh Virdi** |
+| **Tusharbir Singh Mutty** |
+| **Chirag**                |      |
+| **Nishchay**              |
 
 ---
 
