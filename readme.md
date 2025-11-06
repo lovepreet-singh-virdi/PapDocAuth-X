@@ -183,10 +183,9 @@ The server runs at: **http://localhost:4000**
 ---
 
 ## 👥 Contributors
-| Name                     |
 | **Lovepreet Singh Virdi** |
 | **Tusharbir Singh Mutty** |
-| **Chirag**                |      |
+| **Chirag**                |
 | **Nishchay**              |
 
 ---
