@@ -44,7 +44,15 @@ export async function registerSuperadmin({ fullName, email, password, setupKey }
  * Login
  */
 export async function login({ email, password }) {
-  const user = await User.findOne({ where: { email } });
+const user = await User.findOne({
+  where: { email },
+  include: [
+    {
+      model: Organization,
+      as: "organization"
+    }
+  ]
+});
 
   if (!user) throw new Error("Invalid credentials");
 

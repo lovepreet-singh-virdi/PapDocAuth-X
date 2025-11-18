@@ -2,6 +2,9 @@ import { User } from "./User.js";
 import { Organization } from "./Organization.js";
 import { AuditLog } from "./AuditLog.js";
 import { DocumentWorkflow } from "./DocumentWorkflow.js";
+import { Role } from "./Role.js";
+import { UserRole } from "./UserRole.js";
+
 
 // User belongs to organization
 User.belongsTo(Organization, { foreignKey: "orgId", as: "organization" });
@@ -20,5 +23,6 @@ export {
   User,
   Organization,
   AuditLog,
-  DocumentWorkflow
+  DocumentWorkflow, Role, UserRole
 };
+
