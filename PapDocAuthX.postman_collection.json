@@ -1,0 +1,189 @@
+{
+  "info": {
+    "name": "PapDocAuthX+ Stable Full API",
+    "_postman_id": "papdocauthx-collection-2025",
+    "description": "Full backend API collection for PapDocAuthX+. Supports JWT login, refresh tokens, RBAC, document uploads, workflow, revocation, and verification.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:4000" },
+    { "key": "token", "value": "" },
+    { "key": "refreshToken", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "AUTH",
+      "item": [
+        {
+          "name": "Register User (Admin / Verifier / User)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{base_url}}/api/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"newuser@example.com\",\n  \"password\": \"123456\",\n  \"role\": \"user\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login (Auto-save token + refreshToken)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "let res = pm.response.json();",
+                  "if (res.token) pm.collectionVariables.set('token', res.token);",
+                  "if (res.refreshToken) pm.collectionVariables.set('refreshToken', res.refreshToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{base_url}}/api/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user1@example.com\",\n  \"password\": \"pwd1\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Refresh Access Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{base_url}}/api/auth/refresh",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Logout (Revoke Refresh Token)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{base_url}}/api/auth/logout",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "DOCUMENT",
+      "item": [
+        {
+          "name": "Upload Document Version (User + Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{base_url}}/api/document/upload-version",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"docId\": \"DOC1001\",\n  \"type\": \"degree\",\n  \"metadata\": {\n    \"fileType\": \"pdf\",\n    \"pageCount\": 2,\n    \"sizeInKB\": 256,\n    \"mimeType\": \"application/pdf\"\n  },\n  \"hashes\": {\n    \"textHash\": \"hash_text_sample\",\n    \"imageHash\": \"hash_image_sample\",\n    \"signatureHash\": \"hash_signature_sample\",\n    \"stampHash\": \"hash_stamp_sample\"\n  }\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "VERIFICATION",
+      "item": [
+        {
+          "name": "Verify Document (Verifier + Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{base_url}}/api/verification/verify",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"docId\": \"DOC1001\",\n  \"hashes\": {\n    \"textHash\": \"hash_text_sample\",\n    \"imageHash\": \"hash_image_sample\",\n    \"signatureHash\": \"hash_signature_sample\",\n    \"stampHash\": \"hash_stamp_sample\"\n  }\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "WORKFLOW",
+      "item": [
+        {
+          "name": "Change Workflow State (Admin Only)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{base_url}}/api/workflow/change-state",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"docId\": \"DOC1001\",\n  \"toState\": \"APPROVED\",\n  \"reason\": \"Verified and approved manually.\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "REVOCATION",
+      "item": [
+        {
+          "name": "Revoke Document Version (Admin Only)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": "{{base_url}}/api/revocation/revoke",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"docId\": \"DOC1001\",\n  \"version\": 1,\n  \"reason\": \"Tampering detected\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Revocation Status (Public)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/revocation/status/DOC1001"
+          }
+        }
+      ]
+    },
+    {
+      "name": "QR",
+      "item": [
+        {
+          "name": "Generate QR for DOC1001",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/qr/generate/DOC1001"
+          }
+        }
+      ]
+    }
+  ]
+}
