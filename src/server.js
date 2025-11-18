@@ -1,11 +1,24 @@
-import dotenv from "dotenv";
-dotenv.config();
-
 import app from "./app.js";
+import { connectMongo } from "./config/dbMongo.js";
+import { connectPostgres, sequelize } from "./config/dbPostgres.js";
+import { env } from "./config/env.js";
 
-// Read port from .env or default to 5000
-const PORT = process.env.PORT || 5000;
+// SQL models
+import "./models/sql/index.js";
 
-app.listen(PORT, () => {
-  console.log(`🚀 PapDocAuthX v2 server running on port ${PORT}`);
-});
+// Mongo models
+import "./models/mongo/index.js";
+
+const startServer = async () => {
+  await connectMongo();
+  await connectPostgres();
+
+  // Sync SQL tables (dev only)
+  await sequelize.sync({ alter: true });
+  console.log("🟦 SQL tables synchronized");
+
+  app.listen(env.port, () => {
+    console.log(`🚀 PapDocAuthX v2 server running on port ${env.port}`);
+  });
+};
+startServer();
