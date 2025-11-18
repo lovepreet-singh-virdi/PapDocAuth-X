@@ -16,6 +16,11 @@ const DocumentSchema = new mongoose.Schema(
       sizeInKB: Number,
       mimeType: String,
     },
+
+    versionHashChain: {
+      type: [String],
+      default: []
+    }
   },
   { timestamps: true }
 );

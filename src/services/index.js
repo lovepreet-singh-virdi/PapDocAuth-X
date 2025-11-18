@@ -1,4 +1,6 @@
 export * from "./hashingService.js";
+export * from "./auditService.js";
+
 
 // Later we will add:
 // export * from "./authService.js";
