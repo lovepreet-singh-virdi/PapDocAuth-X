@@ -1,7 +1,10 @@
 import { Router } from "express";
+import authRoutes from "./authRoutes.js";
+import orgRoutes from "./orgRoutes.js";
 
 const router = Router();
 
-// Empty for now — controllers will be added later
+router.use("/auth", authRoutes);
+router.use("/orgs", orgRoutes);
 
 export default router;

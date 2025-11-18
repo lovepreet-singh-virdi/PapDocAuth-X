@@ -14,6 +14,7 @@ Organization.init(
     name: {
       type: DataTypes.STRING,
       allowNull: false,
+      unique: true,
     },
 
     slug: {
@@ -23,13 +24,29 @@ Organization.init(
     },
 
     type: {
-      type: DataTypes.STRING, // e.g., "university", "company"
+      type: DataTypes.STRING, // "university" | "company"
       allowNull: false,
+      defaultValue: "organization",
     },
   },
   {
     sequelize,
     modelName: "Organization",
     tableName: "organizations",
+
+    hooks: {
+      beforeValidate: (org) => {
+        if (org.name && !org.slug) {
+          org.slug = org.name
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/(^-|-$)+/g, "");
+        }
+
+        if (!org.type) {
+          org.type = "organization";
+        }
+      },
+    },
   }
 );

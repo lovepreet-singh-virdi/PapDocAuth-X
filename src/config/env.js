@@ -1,8 +1,8 @@
 import dotenv from "dotenv";
-dotenv.config();
+dotenv.config(); // Load .env BEFORE reading anything
 
 export const env = {
-  port: process.env.PORT || 5000,
+  port: process.env.PORT || 4000,
 
   mongoUri: process.env.MONGO_URI,
 
@@ -20,4 +20,11 @@ export const env = {
   },
 
   hashSecret: process.env.HASH_SECRET || "default_chain_secret",
+
+  allowSuperadminRegistration:
+    process.env.ALLOW_SUPERADMIN_REGISTRATION || "false",
+
+  setupKey: process.env.SETUP_KEY || null
 };
+
+console.log("DEBUG MONGO URI:", process.env.MONGO_URI);
