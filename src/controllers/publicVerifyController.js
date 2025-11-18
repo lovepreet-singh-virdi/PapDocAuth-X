@@ -1,54 +1,159 @@
 import { Document } from "../models/mongo/Document.js";
 import { DocumentVersion } from "../models/mongo/DocumentVersion.js";
+import { computeMerkleRoot, sha256 } from "../services/hashingService.js";
+import { Organization } from "../models/sql/Organization.js";
 
-export const publicVerifyController = {
-  verify: async (req, res, next) => {
-    try {
-      const { docId, versionHash } = req.query;
-
-      if (!docId || !versionHash) {
-        return res.status(400).json({
-          success: false,
-          error: "docId and versionHash are required"
-        });
-      }
-
-      const doc = await Document.findOne({ docId });
-      if (!doc) {
-        return res.status(404).json({
-          success: false,
-          error: "Document not found"
-        });
-      }
-
-      const version = await DocumentVersion.findOne({
-        docId,
-        versionHash
+export const publicVerify = async (req, res) => {
+  try {
+    const { docId, versionHash, textHash, imageHash, signatureHash, stampHash } = req.body;
+    
+    console.log("hello in publicVerify", docId);
+    console.log("Hashes received:", { textHash: !!textHash, imageHash: !!imageHash, signatureHash: !!signatureHash, stampHash: !!stampHash });
+    
+    // Validate input
+    if (!docId) {
+      return res.json({
+        verified: false,
+        reason: "DOC_NOT_FOUND",
+        document: { docId: null, type: null, organization: null, latestVersion: null },
+        version: { versionNumber: null, active: false, revoked: false }
       });
-
-      if (!version) {
-        return res.json({
-          success: true,
-          isAuthenticCryptographically: false,
-          isApprovedByAuthority: false,
-          isRevoked: false,
-          workflowStatus: "UNKNOWN"
-        });
-      }
-
-      const isRevoked = version.workflowStatus === "REVOKED";
-
-      res.json({
-        success: true,
-        docId,
-        versionNumber: version.versionNumber,
-        isAuthenticCryptographically: true,
-        isApprovedByAuthority: version.workflowStatus === "APPROVED",
-        isRevoked,
-        workflowStatus: version.workflowStatus
-      });
-    } catch (err) {
-      next(err);
     }
+
+    // Fetch Document
+    const doc = await Document.findOne({ docId });
+    if (!doc) {
+      return res.json({
+        verified: false,
+        reason: "DOC_NOT_FOUND",
+        document: { docId, type: null, organization: null, latestVersion: null },
+        version: { versionNumber: null, active: false, revoked: false }
+      });
+    }
+
+    // Get organization name
+    const org = await Organization.findByPk(doc.ownerOrgId);
+
+    // Latest approved or revoked version
+    const latest = await DocumentVersion.findOne({
+      docId,
+      versionNumber: doc.currentVersion
+    });
+
+    if (!latest) {
+      return res.json({
+        verified: false,
+        reason: "VERSION_NOT_FOUND",
+        document: {
+          docId,
+          type: doc.type,
+          organization: org?.name || null,
+          latestVersion: null
+        },
+        version: { versionNumber: null, active: false, revoked: false }
+      });
+    }
+
+    // Use hashes provided from frontend
+    let merkleMatches = false;
+    if (textHash || imageHash || signatureHash || stampHash) {
+      try {
+        const hashes = {
+          textHash: textHash || latest.textHash || "",
+          imageHash: imageHash || latest.imageHash || "",
+          signatureHash: signatureHash || latest.signatureHash || "",
+          stampHash: stampHash || latest.stampHash || ""
+        };
+
+        console.log("Generated hashes:", hashes);
+        console.log("Stored hashes:", {
+          textHash: latest.textHash,
+          imageHash: latest.imageHash,
+          signatureHash: latest.signatureHash,
+          stampHash: latest.stampHash
+        });
+
+        const computedRoot = computeMerkleRoot(hashes);
+        console.log("Computed merkle root:", computedRoot);
+        console.log("Stored merkle root:", latest.merkleRoot);
+        
+        merkleMatches = computedRoot === latest.merkleRoot;
+      } catch (hashError) {
+        console.error("Error creating hash:", hashError);
+        return res.status(400).json({
+          verified: false,
+          reason: "HASH_GENERATION_ERROR",
+          error: hashError.message,
+          document: {
+            docId,
+            type: doc.type,
+            organization: org?.name || null,
+            latestVersion: latest.versionNumber
+          },
+          version: {
+            versionNumber: latest.versionNumber,
+            active: latest.workflowStatus === "APPROVED",
+            revoked: latest.workflowStatus === "REVOKED"
+          }
+        });
+      }
+    }
+
+    // If client provided only versionHash (QR flow)
+    let versionMatches = false;
+    if (versionHash) {
+      versionMatches = versionHash === latest.versionHash;
+    }
+
+    const matched = merkleMatches || versionMatches;
+
+    // Response builder
+    const responseBase = {
+      document: {
+        docId,
+        type: doc.type,
+        organization: org?.name || null,
+        latestVersion: latest.versionNumber
+      },
+      version: {
+        versionNumber: latest.versionNumber,
+        active: latest.workflowStatus === "APPROVED",
+        revoked: latest.workflowStatus === "REVOKED"
+      }
+    };
+
+    // Determine result
+    if (!matched) {
+      return res.json({
+        verified: false,
+        reason: "HASH_MISMATCH",
+        ...responseBase
+      });
+    }
+
+    if (latest.workflowStatus === "REVOKED") {
+      return res.json({
+        verified: true,
+        reason: "VALID_BUT_REVOKED",
+        ...responseBase
+      });
+    }
+
+    // VALID + APPROVED
+    return res.json({
+      verified: true,
+      reason: "VALID_AND_ACTIVE",
+      ...responseBase
+    });
+
+  } catch (err) {
+    console.error("Public verify error:", err);
+    return res.status(500).json({
+      verified: false,
+      reason: "SERVER_ERROR",
+      error: err.message,
+      document: null,
+      version: null
+    });
   }
 };
