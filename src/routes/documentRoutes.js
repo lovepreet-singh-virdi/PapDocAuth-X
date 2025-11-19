@@ -6,29 +6,29 @@ import { validateDocumentUpload, validateDocIdParam, validatePagination } from "
 
 const router = Router();
 
-// Get all documents (org-filtered)
+// Get all documents (org-filtered, read-only for verifiers)
 router.get(
   "/",
   authMiddleware,
-  checkRole(["admin", "superadmin"]),
+  checkRole(["admin", "superadmin", "verifier"]),
   validatePagination,
   documentController.getAllDocuments
 );
 
-// Get document details
+// Get document details (read-only for verifiers)
 router.get(
   "/:docId",
   authMiddleware,
-  checkRole(["admin", "superadmin"]),
+  checkRole(["admin", "superadmin", "verifier"]),
   validateDocIdParam,
   documentController.getDetails
 );
 
-// Get document versions
+// Get document versions (read-only for verifiers)
 router.get(
   "/:docId/versions",
   authMiddleware,
-  checkRole(["admin", "superadmin"]),
+  checkRole(["admin", "superadmin", "verifier"]),
   validateDocIdParam,
   documentController.getVersions
 );

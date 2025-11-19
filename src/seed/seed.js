@@ -139,7 +139,7 @@ import "../models/sql/index.js";
                         fullName: userData.fullName,
                         email: userData.email,
                         passwordHash,
-                        role: "user",
+                        role: "verifier",
                         orgId: org.id,
                     });
 
@@ -156,7 +156,7 @@ import "../models/sql/index.js";
         
         for (const org of orgRecords) {
             const adminUser = await User.findOne({ where: { orgId: org.id, role: 'admin' } });
-            const regularUsers = await User.findAll({ where: { orgId: org.id, role: 'user' } });
+            const regularUsers = await User.findAll({ where: { orgId: org.id, role: 'verifier' } });
             
             if (adminUser && regularUsers.length > 0) {
                 // Create 15-25 documents per organization
