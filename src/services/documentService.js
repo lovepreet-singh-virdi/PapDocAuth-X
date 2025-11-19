@@ -1,5 +1,4 @@
 import crypto from "crypto";
-import mongoose from "mongoose";
 import { Document } from "../models/mongo/Document.js";
 import { DocumentVersion } from "../models/mongo/DocumentVersion.js";
 import { HashPart } from "../models/mongo/HashPart.js";
@@ -140,7 +139,6 @@ export async function getDocumentVersions({ docId, orgId, role }) {
 
 /**
  * Create new document version + hash parts + update root document
- * Uses MongoDB transactions for atomicity
  */
 export async function uploadDocumentVersion({
     orgId,
@@ -150,95 +148,79 @@ export async function uploadDocumentVersion({
     metadata,
     hashes,
 }) {
-    const session = await mongoose.startSession();
-    session.startTransaction();
+    // 1. Check if root Document exists
+    let doc = await Document.findOne({ docId });
 
-    try {
-        // 1. Check if root Document exists
-        let doc = await Document.findOne({ docId }).session(session);
-
-        // If document does not exist → create it
-        if (!doc) {
-            const [newDoc] = await Document.create([{
-                docId,
-                ownerOrgId: orgId,
-                type,
-                metadata,
-                currentVersion: 0,
-                versionHashChain: [],
-            }], { session });
-            doc = newDoc;
-        }
-
-        // 2. Determine version number
-        const versionNumber = (doc.currentVersion || 0) + 1;
-
-        // 3. Compute Merkle Root
-        const merkleRoot = computeMerkleRoot(hashes);
-
-        // 4. Compute version hash
-        const prevVersionHash =
-            versionNumber === 1 ? null : doc.versionHashChain[doc.versionHashChain.length - 1];
-
-        const versionHash = computeVersionHash(prevVersionHash, merkleRoot);
-
-        // 5. Create the DocumentVersion record
-        const [versionRecord] = await DocumentVersion.create([{
+    // If document does not exist → create it
+    if (!doc) {
+        doc = await Document.create({
             docId,
-            versionNumber,
-            merkleRoot,
-            prevVersionHash,
-            versionHash,
-            workflowStatus: "APPROVED",
-
-            createdByUserId: userId,   // required by schema
-            ownerOrgId: orgId          // required by schema
-        }], { session });
-
-        // 6. Save the hash parts
-        await HashPart.create([{
-            docId,
-            versionNumber,
-            textHash: hashes.textHash,
-            imageHash: hashes.imageHash,
-            signatureHash: hashes.signatureHash,
-            stampHash: hashes.stampHash,
-
             ownerOrgId: orgId,
-            createdByUserId: userId
-        }], { session });
-
-        // 7. Update Root Document
-        doc.currentVersion = versionNumber;
-        doc.versionHashChain.push(versionHash);
-        await doc.save({ session });
-
-        // Commit MongoDB transaction
-        await session.commitTransaction();
-
-        // 8. Audit Log (SQL) - after MongoDB transaction succeeds
-        // If this fails, MongoDB changes are already committed
-        // but we throw error to notify caller
-        await addAuditEntry({
-            userId,
-            orgId,
-            docId,
-            versionNumber,
-            action: "UPLOAD_VERSION",
-            details: `Document version ${versionNumber} uploaded and auto-approved`,
+            type,
+            metadata,
+            currentVersion: 0,
+            versionHashChain: [],
         });
-
-        return {
-            versionRecord,
-            merkleRoot,
-            versionHash,
-            versionNumber,
-        };
-    } catch (error) {
-        // Rollback MongoDB transaction on any error
-        await session.abortTransaction();
-        throw error;
-    } finally {
-        session.endSession();
     }
+
+    // 2. Determine version number
+    const versionNumber = (doc.currentVersion || 0) + 1;
+
+    // 3. Compute Merkle Root
+    const merkleRoot = computeMerkleRoot(hashes);
+
+    // 4. Compute version hash
+    const prevVersionHash =
+        versionNumber === 1 ? null : doc.versionHashChain[doc.versionHashChain.length - 1];
+
+    const versionHash = computeVersionHash(prevVersionHash, merkleRoot);
+
+    // 5. Create the DocumentVersion record
+    const versionRecord = await DocumentVersion.create({
+        docId,
+        versionNumber,
+        merkleRoot,
+        prevVersionHash,
+        versionHash,
+        workflowStatus: "APPROVED",
+
+        createdByUserId: userId,   // required by schema
+        ownerOrgId: orgId          // required by schema
+    });
+
+
+    // 6. Save the hash parts
+    await HashPart.create({
+        docId,
+        versionNumber,
+        textHash: hashes.textHash,
+        imageHash: hashes.imageHash,
+        signatureHash: hashes.signatureHash,
+        stampHash: hashes.stampHash,
+
+        ownerOrgId: orgId,
+        createdByUserId: userId
+    });
+
+    // 7. Update Root Document
+    doc.currentVersion = versionNumber;
+    doc.versionHashChain.push(versionHash);
+    await doc.save();
+
+    // 8. Audit Log (SQL)
+    await addAuditEntry({
+        userId,
+        orgId,
+        docId,
+        versionNumber,
+        action: "UPLOAD_VERSION",
+        details: `Document version ${versionNumber} uploaded and auto-approved`,
+    });
+
+    return {
+        versionRecord,
+        merkleRoot,
+        versionHash,
+        versionNumber,
+    };
 }
