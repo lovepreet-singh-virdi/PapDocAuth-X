@@ -1,16 +1,16 @@
 import { Router } from "express";
-import { qrController } from "../controllers/qrController.js";
+import { analyticsController } from "../controllers/analyticsController.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 import { checkRole } from "../middleware/checkRole.js";
 
 const router = Router();
 
-// Only admin and superadmin can generate QR codes
+// Admin and superadmin can view analytics
 router.get(
-  "/generate/:docId",
+  "/summary",
   authMiddleware,
   checkRole(["admin", "superadmin"]),
-  qrController.generate
+  analyticsController.summary
 );
 
 export default router;
