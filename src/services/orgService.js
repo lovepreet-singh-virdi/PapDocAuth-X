@@ -1,4 +1,5 @@
 import bcrypt from "bcryptjs";
+import { sequelize } from "../config/dbPostgres.js";
 import { Organization } from "../models/sql/Organization.js";
 import { User } from "../models/sql/User.js";
 
@@ -56,21 +57,32 @@ export async function createOrganization(name) {
 /**
  * Create an admin user for an organization.
  * Role = admin, orgId must exist.
+ * Uses Sequelize transaction for atomicity
  */
 export async function createAdminForOrg({ orgId, fullName, email, password }) {
-  const org = await Organization.findByPk(orgId);
-  if (!org) throw new Error("Organization not found");
+  const t = await sequelize.transaction();
+  
+  try {
+    const org = await Organization.findByPk(orgId, { transaction: t });
+    if (!org) throw new Error("Organization not found");
 
-  const exists = await User.findOne({ where: { email } });
-  if (exists) throw new Error("Admin already exists with this email");
+    const exists = await User.findOne({ where: { email }, transaction: t });
+    if (exists) throw new Error("Admin already exists with this email");
 
-  const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await bcrypt.hash(password, 10);
 
-  return await User.create({
-    fullName,
-    email,
-    passwordHash,
-    role: "admin",
-    orgId,
-  });
+    const user = await User.create({
+      fullName,
+      email,
+      passwordHash,
+      role: "admin",
+      orgId,
+    }, { transaction: t });
+
+    await t.commit();
+    return user;
+  } catch (error) {
+    await t.rollback();
+    throw error;
+  }
 }
