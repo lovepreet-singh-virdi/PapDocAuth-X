@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import { Organization } from "../models/sql/Organization.js";
 import { User } from "../models/sql/User.js";
+import { sequelize } from "../config/dbPostgres.js";
 
 /**
  * Get all organizations.
@@ -56,21 +57,25 @@ export async function createOrganization(name) {
 /**
  * Create an admin user for an organization.
  * Role = admin, orgId must exist.
+ * Uses PostgreSQL transaction for ACID compliance.
  */
 export async function createAdminForOrg({ orgId, fullName, email, password }) {
-  const org = await Organization.findByPk(orgId);
-  if (!org) throw new Error("Organization not found");
+  // Start PostgreSQL transaction
+  return await sequelize.transaction(async (t) => {
+    const org = await Organization.findByPk(orgId, { transaction: t });
+    if (!org) throw new Error("Organization not found");
 
-  const exists = await User.findOne({ where: { email } });
-  if (exists) throw new Error("Admin already exists with this email");
+    const exists = await User.findOne({ where: { email }, transaction: t });
+    if (exists) throw new Error("Admin already exists with this email");
 
-  const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await bcrypt.hash(password, 10);
 
-  return await User.create({
-    fullName,
-    email,
-    passwordHash,
-    role: "admin",
-    orgId,
+    return await User.create({
+      fullName,
+      email,
+      passwordHash,
+      role: "admin",
+      orgId,
+    }, { transaction: t });
   });
 }
