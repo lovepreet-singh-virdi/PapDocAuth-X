@@ -1,4 +1,4 @@
-# PapDocAuthX v2 - Database Schema ER Diagram
+# PapDocAuthX - Database Schema ER Diagram
 
 ## Entity-Relationship Diagram
 
@@ -134,7 +134,7 @@ erDiagram
 
 ### **Polyglot Persistence Strategy**
 
-PapDocAuthX v2 uses a **hybrid PostgreSQL + MongoDB architecture** to optimize for different data access patterns:
+PapDocAuthX uses a **hybrid PostgreSQL + MongoDB architecture** to optimize for different data access patterns:
 
 #### **PostgreSQL (Relational - ACID Critical)**
 

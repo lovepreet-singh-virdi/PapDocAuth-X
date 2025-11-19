@@ -1,4 +1,4 @@
-# PapDocAuthX+ v2
+# PapDocAuthX
 
 ## Enterprise-Grade Polyglot Document Authentication Backend
 
@@ -33,17 +33,17 @@
 
 ## 🎯 Project Overview
 
-**PapDocAuthX+ v2** is a next-generation, production-ready backend system engineered to address a critical challenge facing universities, corporations, government agencies, and HR departments worldwide:
+**PapDocAuthX** is a next-generation, production-ready backend system engineered to address a critical challenge facing universities, corporations, government agencies, and HR departments worldwide:
 
 > **How can institutions verify the authenticity of sensitive documents—degrees, transcripts, offer letters, certificates, and legal documents—without exposing the actual documents or relying on insecure file-sharing mechanisms?**
 
 ### The Zero-Document-Upload Paradigm
 
-Unlike traditional document verification systems that require full file uploads to centralized servers, PapDocAuthX+ v2 implements a revolutionary **zero-document-upload verification model**. The server never stores PDFs, images, signatures, or raw text content. Instead, it stores only **multimodal cryptographic fingerprints** that are computed client-side before transmission.
+Unlike traditional document verification systems that require full file uploads to centralized servers, PapDocAuthX implements a revolutionary **zero-document-upload verification model**. The server never stores PDFs, images, signatures, or raw text content. Instead, it stores only **multimodal cryptographic fingerprints** that are computed client-side before transmission.
 
-### What Makes PapDocAuthX+ v2 Unique?
+### What Makes PapDocAuthX Unique?
 
-PapDocAuthX+ v2 combines cutting-edge cryptographic techniques with enterprise-grade architecture to deliver:
+PapDocAuthX combines cutting-edge cryptographic techniques with enterprise-grade architecture to deliver:
 
 - **Multimodal Hashing**: Four independent cryptographic hashes (text, raster image, signature ROI, stamp ROI) provide defense-in-depth against sophisticated document forgery
 - **Merkle Tree Integrity**: Binary Merkle tree roots ensure that even single-pixel modifications are cryptographically detectable
@@ -55,7 +55,7 @@ PapDocAuthX+ v2 combines cutting-edge cryptographic techniques with enterprise-g
 
 ### Enterprise Security Guarantees
 
-PapDocAuthX+ v2 provides four fundamental security guarantees:
+PapDocAuthX provides four fundamental security guarantees:
 
 1. **Strong Authenticity**: Every document version is cryptographically linked to previous versions using immutable version hashes, creating a verifiable chain of custody
 2. **Strong Integrity**: Cryptographic audit chains prevent unauthorized modifications, even by privileged database administrators
@@ -95,9 +95,9 @@ Most systems rely on visual inspection or basic OCR, which cannot detect pixel-p
 #### 5. **No Immutable Audit Trail**
 Without cryptographic audit logs, database administrators can alter records, version history can be rewritten, and accountability cannot be proven.
 
-### How PapDocAuthX+ v2 Solves These Problems
+### How PapDocAuthX Solves These Problems
 
-| Problem | PapDocAuthX+ v2 Solution |
+| Problem | PapDocAuthX Solution |
 |---------|-------------------------|
 | Full-document uploads | **Client-side hashing**: Only cryptographic fingerprints transmitted |
 | Email verification delays | **Real-time cryptographic verification**: Instant validation via API |
@@ -112,7 +112,7 @@ Without cryptographic audit logs, database administrators can alter records, ver
 
 ### Feature 1: Multimodal Document Fingerprinting
 
-Instead of a single hash, PapDocAuthX+ v2 uses **four independent cryptographic hashes**:
+Instead of a single hash, PapDocAuthX uses **four independent cryptographic hashes**:
 
 ```
 1. TEXT HASH (textHash)
@@ -1424,8 +1424,8 @@ Document {
 ### Step 1: Clone Repository
 
 ```bash
-git clone https://github.com/yourusername/papdocauthx-v2.git
-cd papdocauthx-v2
+git clone https://github.com/yourusername/papdocauthx.git
+cd papdocauthx
 ```
 
 ---
@@ -1483,6 +1483,31 @@ npm run init:mongo
 ```
 
 ---
+
+## Repository housekeeping (current state)
+
+Short summary of recent repo organization and artifacts you can rely on for demos and grading:
+
+- **Canonical migration docs moved** to `docs/migrations/` (ER diagram, benchmarks, ADT project summary, 100% achievement evidence, DB verification results). Long narrative MD files were removed from `migrations/` to keep that folder runnable.
+- **`migrations/README.md`** is now a concise runbook containing the ordered `psql` commands to apply migrations and quick verification queries.
+- **Postman artifacts** are present in the repo and ready to import:
+    - `postman_collection.json` — full API collection covering all endpoints
+    - `postman_environment.json` — local environment variables (base_url, jwt, auth_token, orgId, docId, versionHash)
+    - `POSTMAN_GUIDE.md` — quick-start instructions and recommended request order for demos
+- **DB verification**: The one-off verification run used a small helper script during investigation and the JSON results were saved to `docs/migrations/DB_VERIFICATION.md`. (Temporary verification scripts were removed from `scripts/` to keep the repo clean.)
+- **Branch housekeeping**: A temporary branch `chore/cleanup-migrations-docs` was created, merged into `papdocauthx-v2-backend`, and then deleted locally/remote. The final changes are present on `papdocauthx-v2-backend`.
+
+Re-run verification locally (if you need to reproduce):
+
+```powershell
+# Install helper (only if you want to re-create the helper script)
+npm install pg --no-audit --no-fund
+
+# Example: run verification queries against local Postgres (replace password)
+$env:PGPASSWORD='postgres'; $env:PGHOST='localhost'; $env:PGUSER='postgres'; $env:PGPORT='5432'; $env:PGDATABASE='papdocauthxv2'; node scripts/db_verify.cjs
+```
+
+Note: `scripts/db_verify.cjs` was intentionally removed before merging; you can recreate it from commit history or use the SQL snippets in `docs/migrations/DB_VERIFICATION.md` directly.
 
 ## ⚙️ Environment Configuration
 
@@ -1915,7 +1940,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ```
 MIT License
 
-Copyright (c) 2024 PapDocAuthX+ Contributors
+Copyright (c) 2024 PapDocAuthX Contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -1941,8 +1966,8 @@ SOFTWARE.
 ## 📞 Support & Contact
 
 - **Documentation**: [https://github.com/lovepreet-singh-virdi/PapDocAuth-X#readme](https://github.com/lovepreet-singh-virdi/PapDocAuth-X#readme)
-- **Issues**: [GitHub Issues](https://github.com/yourusername/papdocauthx-v2/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/papdocauthx-v2/discussions)
+- **Issues**: [GitHub Issues](https://github.com/lovepreet-singh-virdi/PapDocAuth-X/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/lovepreet-singh-virdi/PapDocAuth-X/discussions)
 - **Email**: lovepreetsinghvirdi001@gmail.com
 
 ---
@@ -1970,4 +1995,4 @@ The maintainers are not responsible for any security breaches or data loss resul
 
 ---
 
-**Built with ❤️ by the PapDocAuthX+ Team**
+**Built with ❤️ by the PapDocAuthX Team**
