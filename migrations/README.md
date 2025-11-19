@@ -1,7 +1,7 @@
 # Database Migrations - Week 1 Implementation
 
 ## Overview
-This directory contains advanced database migrations implementing indexes, partitioning, stored procedures, triggers, and materialized views for the PapDocAuthX v2 system.
+This directory contains advanced database migrations implementing indexes, partitioning, stored procedures, triggers, and materialized views for the PapDocAuthX system.
 
 ## Migration Files
 
@@ -406,7 +406,7 @@ See **[ER_DIAGRAM.md](./ER_DIAGRAM.md)** for:
 
 **Migration Completed:** 2025-11-19  
 **Database Version:** PostgreSQL 18.1  
-**Project:** PapDocAuthX v2  
+**Project:** PapDocAuthX  
 **Author:** Lovepreet Singh
 
 ---
