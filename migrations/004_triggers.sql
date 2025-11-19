@@ -11,12 +11,12 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER users_update_timestamp
-    BEFORE UPDATE ON "Users"
+    BEFORE UPDATE ON users
     FOR EACH ROW
     EXECUTE FUNCTION update_timestamp();
 
 CREATE TRIGGER orgs_update_timestamp
-    BEFORE UPDATE ON "Organizations"
+    BEFORE UPDATE ON organizations
     FOR EACH ROW
     EXECUTE FUNCTION update_timestamp();
 
@@ -29,11 +29,11 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER prevent_audit_update
-    BEFORE UPDATE ON "AuditLogs"
+    BEFORE UPDATE ON audit_logs
     FOR EACH ROW
     EXECUTE FUNCTION prevent_audit_modification();
 
 CREATE TRIGGER prevent_audit_delete
-    BEFORE DELETE ON "AuditLogs"
+    BEFORE DELETE ON audit_logs
     FOR EACH ROW
     EXECUTE FUNCTION prevent_audit_modification();

@@ -10,9 +10,9 @@ SELECT
     COUNT(DISTINCT a."docId") as total_documents,
     COUNT(a.id) as total_audit_logs,
     MAX(a.timestamp) as last_activity
-FROM "Organizations" o
-LEFT JOIN "Users" u ON u."orgId" = o.id
-LEFT JOIN "AuditLogs" a ON a."orgId" = o.id
+FROM organizations o
+LEFT JOIN users u ON u."orgId" = o.id
+LEFT JOIN audit_logs a ON a."orgId" = o.id
 GROUP BY o.id, o.name;
 
 CREATE UNIQUE INDEX idx_mv_org_stats_id ON mv_org_stats(id);
@@ -25,7 +25,7 @@ SELECT
     COUNT(*) as action_count,
     MAX(timestamp) as last_action,
     MIN(timestamp) as first_action
-FROM "AuditLogs"
+FROM audit_logs
 WHERE "docId" IS NOT NULL
 GROUP BY "docId", "orgId";
 
@@ -35,14 +35,14 @@ CREATE UNIQUE INDEX idx_mv_doc_activity_doc ON mv_document_activity("docId");
 CREATE MATERIALIZED VIEW mv_user_activity AS
 SELECT 
     u.id,
-    u.fullName,
+    u."fullName",
     u."orgId",
     COUNT(a.id) as total_actions,
     COUNT(DISTINCT a."docId") as documents_handled,
     MAX(a.timestamp) as last_action
-FROM "Users" u
-LEFT JOIN "AuditLogs" a ON a."userId" = u.id
-GROUP BY u.id, u.fullName, u."orgId";
+FROM users u
+LEFT JOIN audit_logs a ON a."userId" = u.id
+GROUP BY u.id, u."fullName", u."orgId";
 
 CREATE UNIQUE INDEX idx_mv_user_activity_id ON mv_user_activity(id);
 
