@@ -1587,13 +1587,48 @@ node -e "console.log(require('crypto').randomBytes(16).toString('hex'))"
 
 ---
 
-## 🌱 Database Seeding
+## 🌱 Database Setup & Seeding
 
-### Run Seed Script
+### Fresh Database Setup (Recommended for New Installations)
+
+For a complete fresh setup that creates schema, materialized views, and seed data in one command:
 
 ```bash
-npm run seed
+node scripts/setup-fresh-db.js
 ```
+
+This script will:
+1. Connect to both Postgres and MongoDB
+2. Create base SQL tables using Sequelize models
+3. Run all migration files in `migrations/` (in order)
+4. Execute the seeder to populate initial data
+
+### Database Management Scripts
+
+**Drop views, reseed data, and recreate views:**
+```bash
+node scripts/drop-mv-run-seed-recreate.js
+```
+
+**List existing materialized views:**
+```bash
+node scripts/list-mviews.js
+```
+
+**Run seeder only (schema must already exist):**
+```bash
+npm run seed
+# or
+node src/seed/seed.js
+```
+
+### Important Notes on Schema Management
+
+⚠️ **Migration Philosophy**: This project uses **explicit migrations** instead of `sequelize.sync({ alter: true })` to avoid conflicts with advanced PostgreSQL features (materialized views, partitions, rules).
+
+- Schema changes are **not** automatically applied on server startup
+- Use migration scripts for schema updates
+- Materialized views must be dropped before ALTERing dependent columns
 
 ### What Gets Seeded
 

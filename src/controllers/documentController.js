@@ -64,14 +64,15 @@ export const documentController = {
 
             const { docId, type, metadata, hashes, targetOrgId } = req.body;
 
-            if (!docId || !type || !metadata || !hashes) {
+            if (!docId || !type || !hashes) {
                 return res.status(400).json({
-                    error: "docId, type, metadata and hashes are required",
+                    error: "docId, type, and hashes are required",
                 });
             }
 
             // Validate metadata file size if present
-            if (metadata.fileSize && metadata.fileSize > 5 * 1024 * 1024) {
+            const maxFileSize = parseInt(process.env.MAX_FILE_SIZE_MB || '5') * 1024 * 1024;
+            if (metadata && metadata.fileSize && metadata.fileSize > maxFileSize) {
                 return res.status(400).json({
                     error: "File size must be less than 5MB"
                 });

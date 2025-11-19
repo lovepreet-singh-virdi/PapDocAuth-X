@@ -14,12 +14,15 @@ export const qrController = {
       }
 
       const qrDataUrl = await generateQrImage(payload);
+      const qrValue = `papdocauthx://${payload.docId}/${payload.versionHash}`;
 
       res.json({
         success: true,
         docId,
-        payload,
-        qrDataUrl       // base64 image
+        qrValue,
+        versionHash: payload.versionHash,
+        qrDataUrl,       // base64 image
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours
       });
     } catch (err) {
       next(err);

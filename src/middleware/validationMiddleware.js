@@ -144,46 +144,63 @@ export const validateOrganizationUpdate = [
 
 /**
  * Validation rules for document hash upload
+ * 
+ * Hash Requirements by Document Type:
+ * - Scanned PDFs/Images: imageHash required, textHash optional (if OCR), signature/stamp optional (if ROI)
+ * - Native PDFs: textHash + imageHash required, signature/stamp optional (if ROI)
+ * - Text Documents: textHash required, imageHash optional
+ * - Minimum: At least ONE hash (textHash OR imageHash) must be provided
  */
 export const validateDocumentUpload = [
   body('docId')
     .trim()
     .notEmpty().withMessage('Document ID is required')
-    .matches(/^[A-Z0-9-]+$/).withMessage('Document ID must contain only uppercase letters, numbers, and hyphens')
-    .isLength({ min: 5, max: 100 }).withMessage('Document ID must be 5-100 characters'),
+    .matches(/^[A-Z0-9_-]+$/).withMessage('Document ID must contain only uppercase letters, numbers, underscores, and hyphens')
+    .isLength({ min: 5, max: 150 }).withMessage('Document ID must be 5-150 characters'),
   
-  body('versionNumber')
-    .isInt({ min: 1 }).withMessage('Version number must be a positive integer'),
-  
-  body('textHash')
+  body('type')
     .trim()
-    .notEmpty().withMessage('Text hash is required')
-    .matches(/^[a-f0-9]{64}$/).withMessage('Text hash must be a valid SHA-256 hash (64 hex characters)'),
+    .notEmpty().withMessage('Document type is required')
+    .isIn(['transcript', 'certificate', 'letter', 'license', 'diploma', 'permit', 'contract', 'invoice', 'other']).withMessage('Invalid document type'),
   
-  body('imageHash')
-    .trim()
-    .notEmpty().withMessage('Image hash is required')
-    .matches(/^[a-f0-9]{64}$/).withMessage('Image hash must be a valid SHA-256 hash (64 hex characters)'),
+  body('metadata')
+    .optional()
+    .isObject().withMessage('Metadata must be an object'),
   
-  body('signatureHash')
+  body('hashes')
+    .notEmpty().withMessage('Hashes object is required')
+    .isObject().withMessage('Hashes must be an object')
+    .custom((hashes) => {
+      // At least one primary hash (textHash or imageHash) must be provided
+      if (!hashes.textHash && !hashes.imageHash) {
+        throw new Error('At least one hash (textHash or imageHash) is required');
+      }
+      return true;
+    }),
+  
+  body('hashes.textHash')
     .optional()
     .trim()
-    .matches(/^[a-f0-9]{64}$/).withMessage('Signature hash must be a valid SHA-256 hash (64 hex characters)'),
+    .custom((value) => !value || /^[a-f0-9]{64}$/.test(value))
+    .withMessage('Text hash must be a valid SHA-256 hash (64 hex characters)'),
   
-  body('stampHash')
+  body('hashes.imageHash')
     .optional()
     .trim()
-    .matches(/^[a-f0-9]{64}$/).withMessage('Stamp hash must be a valid SHA-256 hash (64 hex characters)'),
+    .custom((value) => !value || /^[a-f0-9]{64}$/.test(value))
+    .withMessage('Image hash must be a valid SHA-256 hash (64 hex characters)'),
   
-  body('merkleRoot')
-    .trim()
-    .notEmpty().withMessage('Merkle root is required')
-    .matches(/^[a-f0-9]{64}$/).withMessage('Merkle root must be a valid SHA-256 hash (64 hex characters)'),
-  
-  body('prevVersionHash')
+  body('hashes.signatureHash')
     .optional()
     .trim()
-    .matches(/^[a-f0-9]{64}$/).withMessage('Previous version hash must be a valid SHA-256 hash (64 hex characters)'),
+    .custom((value) => !value || /^[a-f0-9]{64}$/.test(value))
+    .withMessage('Signature hash must be a valid SHA-256 hash (64 hex characters)'),
+  
+  body('hashes.stampHash')
+    .optional()
+    .trim()
+    .custom((value) => !value || /^[a-f0-9]{64}$/.test(value))
+    .withMessage('Stamp hash must be a valid SHA-256 hash (64 hex characters)'),
   
   validate
 ];

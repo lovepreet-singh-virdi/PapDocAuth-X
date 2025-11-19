@@ -24,6 +24,7 @@ export async function generateQrPayload(docId) {
 }
 
 export async function generateQrImage(payload) {
-  const jsonString = JSON.stringify(payload);
-  return QRCode.toDataURL(jsonString);
+  // Use papdocauthx:// URL format for consistent scanning
+  const qrValue = `papdocauthx://${payload.docId}/${payload.versionHash}`;
+  return QRCode.toDataURL(qrValue);
 }

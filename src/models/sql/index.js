@@ -23,7 +23,8 @@ User.hasMany(AuditLog, { foreignKey: "userId", as: "auditLogs" });
 Organization.hasMany(AuditLog, { foreignKey: "orgId", as: "auditLogs" });
 
 // Workflow relationships
-DocumentWorkflow.belongsTo(User, { foreignKey: "changedByUserId" });
+DocumentWorkflow.belongsTo(User, { foreignKey: "changedByUserId", as: "changedBy" });
+User.hasMany(DocumentWorkflow, { foreignKey: "changedByUserId", as: "workflowChanges" });
 
 export {
   User,
