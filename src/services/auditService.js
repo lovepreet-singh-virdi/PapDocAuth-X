@@ -5,6 +5,7 @@ import { computeAuditHash } from "./hashingService.js";
 
 /**
  * Add audit entry with tamper-proof hash chaining
+ * CRITICAL: Now throws errors on failure to ensure audit integrity
  */
 export async function addAuditEntry({
   userId,
@@ -47,9 +48,10 @@ export async function addAuditEntry({
     console.log(`✅ Audit logged: action=${action}, docId=${docId}, version=${versionNumber}`);
     return entry;
   } catch (err) {
-    console.error("Audit log error:", err);
-    // Don't throw - we don't want audit failures to break the main flow
-    return null;
+    console.error("❌ CRITICAL: Audit log failed:", err);
+    // CHANGED: Now throws error to ensure audit integrity
+    // This prevents operations from completing if audit fails
+    throw new Error(`Audit logging failed: ${err.message}`);
   }
 }
 
