@@ -5,10 +5,13 @@ const HashPartSchema = new mongoose.Schema(
     docId: { type: String, required: true },
     versionNumber: { type: Number, required: true },
 
-    textHash: { type: String, required: true },
-    imageHash: { type: String, required: true },
-    signatureHash: { type: String, required: true },
-    stampHash: { type: String, required: true },
+    textHash: { type: String, default: "" },
+    imageHash: { type: String, default: "" },
+    signatureHash: { type: String, default: "" },
+    stampHash: { type: String, default: "" },
+
+    ownerOrgId: { type: Number, required: true },
+    createdByUserId: { type: Number, required: true },
   },
   { timestamps: true }
 );

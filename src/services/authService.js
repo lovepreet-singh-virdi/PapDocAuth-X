@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { Op } from "sequelize";
 import { User } from "../models/sql/User.js";
 import { Organization } from "../models/sql/Organization.js";
 import { env } from "../config/env.js";
@@ -83,10 +84,14 @@ const user = await User.findOne({
 
 /**
  * Get all users (superadmin only)
+ * Excludes superadmin users from the list for security
  */
 export async function getAllUsers() {
   return await User.findAll({
     attributes: ['id', 'fullName', 'email', 'role', 'orgId', 'createdAt'],
+    where: {
+      role: { [Op.ne]: 'superadmin' } // Exclude superadmins
+    },
     include: [{
       model: Organization,
       as: 'organization',

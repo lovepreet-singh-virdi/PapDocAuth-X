@@ -2,6 +2,7 @@ import { Router } from "express";
 import { orgController } from "../controllers/orgController.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 import { checkRole } from "../middleware/checkRole.js";
+import { validateOrganizationCreation, validateUserRegistration, validateIdParam, validatePagination } from "../middleware/validationMiddleware.js";
 
 const router = Router();
 
@@ -12,6 +13,7 @@ router.get(
   "/",
   authMiddleware,
   checkRole(["superadmin"]),
+  validatePagination,
   orgController.getAllOrgs
 );
 
@@ -20,6 +22,8 @@ router.get(
   "/:orgId/admins",
   authMiddleware,
   checkRole(["superadmin"]),
+  validateIdParam('orgId'),
+  validatePagination,
   orgController.getOrgAdmins
 );
 
@@ -28,6 +32,8 @@ router.get(
   "/:orgId/users",
   authMiddleware,
   checkRole(["admin", "superadmin"]),
+  validateIdParam('orgId'),
+  validatePagination,
   orgController.getOrgUsers
 );
 
@@ -36,6 +42,7 @@ router.post(
   "/",
   authMiddleware,
   checkRole(["superadmin"]),
+  validateOrganizationCreation,
   orgController.createOrg
 );
 
@@ -44,6 +51,8 @@ router.post(
   "/:orgId/admins",
   authMiddleware,
   checkRole(["superadmin"]),
+  validateIdParam('orgId'),
+  validateUserRegistration,
   orgController.createOrgAdmin
 );
 
