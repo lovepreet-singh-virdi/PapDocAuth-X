@@ -25,32 +25,21 @@ export const auditController = {
 
       const logs = await getAllAuditLogs({ limit, offset });
 
-      // Enrich with user and org data
-      const enrichedLogs = await Promise.all(
-        logs.map(async (log) => {
-          const user = await User.findByPk(log.userId, {
-            attributes: ['id', 'fullName', 'email', 'role']
-          });
-          const org = await Organization.findByPk(log.orgId, {
-            attributes: ['id', 'name', 'slug']
-          });
-
-          return {
-            id: log.id,
-            userId: log.userId,
-            userName: user?.fullName || 'Unknown',
-            userEmail: user?.email || 'Unknown',
-            userRole: user?.role || 'Unknown',
-            orgId: log.orgId,
-            orgName: org?.name || 'Unknown',
-            docId: log.docId,
-            action: log.action,
-            timestamp: log.timestamp,
-            auditHash: log.auditHash,
-            prevAuditHash: log.prevAuditHash
-          };
-        })
-      );
+      // Map logs to enriched format (data already included via Sequelize associations)
+      const enrichedLogs = logs.map((log) => ({
+        id: log.id,
+        userId: log.userId,
+        userName: log.user?.fullName || 'Unknown',
+        userEmail: log.user?.email || 'Unknown',
+        userRole: log.user?.role || 'Unknown',
+        orgId: log.orgId,
+        orgName: log.organization?.name || 'Unknown',
+        docId: log.docId,
+        action: log.action,
+        timestamp: log.timestamp,
+        auditHash: log.auditHash,
+        prevAuditHash: log.prevAuditHash
+      }));
 
       res.json({
         success: true,
@@ -83,27 +72,19 @@ export const auditController = {
 
       const logs = await getOrgAuditLogs({ orgId: requestedOrgId, limit, offset });
 
-      // Enrich with user data
-      const enrichedLogs = await Promise.all(
-        logs.map(async (log) => {
-          const user = await User.findByPk(log.userId, {
-            attributes: ['id', 'fullName', 'email', 'role']
-          });
-
-          return {
-            id: log.id,
-            userId: log.userId,
-            userName: user?.fullName || 'Unknown',
-            userEmail: user?.email || 'Unknown',
-            userRole: user?.role || 'Unknown',
-            docId: log.docId,
-            action: log.action,
-            timestamp: log.timestamp,
-            auditHash: log.auditHash,
-            prevAuditHash: log.prevAuditHash
-          };
-        })
-      );
+      // Map logs to enriched format (data already included via Sequelize associations)
+      const enrichedLogs = logs.map((log) => ({
+        id: log.id,
+        userId: log.userId,
+        userName: log.user?.fullName || 'Unknown',
+        userEmail: log.user?.email || 'Unknown',
+        userRole: log.user?.role || 'Unknown',
+        docId: log.docId,
+        action: log.action,
+        timestamp: log.timestamp,
+        auditHash: log.auditHash,
+        prevAuditHash: log.prevAuditHash
+      }));
 
       res.json({
         success: true,
@@ -136,26 +117,18 @@ export const auditController = {
         }
       }
 
-      // Enrich with user data
-      const enrichedLogs = await Promise.all(
-        logs.map(async (log) => {
-          const user = await User.findByPk(log.userId, {
-            attributes: ['id', 'fullName', 'email', 'role']
-          });
-
-          return {
-            id: log.id,
-            userId: log.userId,
-            userName: user?.fullName || 'Unknown',
-            userEmail: user?.email || 'Unknown',
-            userRole: user?.role || 'Unknown',
-            action: log.action,
-            timestamp: log.timestamp,
-            auditHash: log.auditHash,
-            prevAuditHash: log.prevAuditHash
-          };
-        })
-      );
+      // Map logs to enriched format (data already included via Sequelize associations)
+      const enrichedLogs = logs.map((log) => ({
+        id: log.id,
+        userId: log.userId,
+        userName: log.user?.fullName || 'Unknown',
+        userEmail: log.user?.email || 'Unknown',
+        userRole: log.user?.role || 'Unknown',
+        action: log.action,
+        timestamp: log.timestamp,
+        auditHash: log.auditHash,
+        prevAuditHash: log.prevAuditHash
+      }));
 
       res.json({
         success: true,

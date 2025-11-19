@@ -1,4 +1,6 @@
 import { AuditLog } from "../models/sql/AuditLog.js";
+import { User } from "../models/sql/User.js";
+import { Organization } from "../models/sql/Organization.js";
 import { computeAuditHash } from "./hashingService.js";
 
 /**
@@ -56,6 +58,18 @@ export async function addAuditEntry({
  */
 export async function getAllAuditLogs({ limit = 100, offset = 0 }) {
   return await AuditLog.findAll({
+    include: [
+      {
+        model: User,
+        as: 'user',
+        attributes: ['id', 'fullName', 'email', 'role']
+      },
+      {
+        model: Organization,
+        as: 'organization',
+        attributes: ['id', 'name', 'slug']
+      }
+    ],
     order: [['timestamp', 'DESC']],
     limit,
     offset
@@ -68,6 +82,13 @@ export async function getAllAuditLogs({ limit = 100, offset = 0 }) {
 export async function getOrgAuditLogs({ orgId, limit = 100, offset = 0 }) {
   return await AuditLog.findAll({
     where: { orgId },
+    include: [
+      {
+        model: User,
+        as: 'user',
+        attributes: ['id', 'fullName', 'email', 'role']
+      }
+    ],
     order: [['timestamp', 'DESC']],
     limit,
     offset
@@ -80,6 +101,13 @@ export async function getOrgAuditLogs({ orgId, limit = 100, offset = 0 }) {
 export async function getDocumentAuditLogs({ docId, limit = 50 }) {
   return await AuditLog.findAll({
     where: { docId },
+    include: [
+      {
+        model: User,
+        as: 'user',
+        attributes: ['id', 'fullName', 'email', 'role']
+      }
+    ],
     order: [['timestamp', 'DESC']],
     limit
   });

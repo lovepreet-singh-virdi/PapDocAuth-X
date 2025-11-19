@@ -2,6 +2,7 @@ import { Router } from "express";
 import { documentController } from "../controllers/documentController.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 import { checkRole } from "../middleware/checkRole.js";
+import { validateDocumentUpload, validateDocIdParam, validatePagination } from "../middleware/validationMiddleware.js";
 
 const router = Router();
 
@@ -10,6 +11,7 @@ router.get(
   "/",
   authMiddleware,
   checkRole(["admin", "superadmin"]),
+  validatePagination,
   documentController.getAllDocuments
 );
 
@@ -18,6 +20,7 @@ router.get(
   "/:docId",
   authMiddleware,
   checkRole(["admin", "superadmin"]),
+  validateDocIdParam,
   documentController.getDetails
 );
 
@@ -26,6 +29,7 @@ router.get(
   "/:docId/versions",
   authMiddleware,
   checkRole(["admin", "superadmin"]),
+  validateDocIdParam,
   documentController.getVersions
 );
 
@@ -34,6 +38,7 @@ router.post(
   "/upload-version",
   authMiddleware,
   checkRole(["admin", "superadmin"]),
+  validateDocumentUpload,
   documentController.uploadVersion
 );
 

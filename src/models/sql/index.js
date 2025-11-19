@@ -10,11 +10,17 @@ import { UserRole } from "./UserRole.js";
 User.belongsTo(Organization, { foreignKey: "orgId", as: "organization" });
 
 // Organization has many users
-Organization.hasMany(User, { foreignKey: "orgId" });
+Organization.hasMany(User, { foreignKey: "orgId", as: "users" });
 
 // AuditLog relationships
-AuditLog.belongsTo(User, { foreignKey: "userId" });
-AuditLog.belongsTo(Organization, { foreignKey: "orgId" });
+AuditLog.belongsTo(User, { foreignKey: "userId", as: "user" });
+AuditLog.belongsTo(Organization, { foreignKey: "orgId", as: "organization" });
+
+// User has many audit logs
+User.hasMany(AuditLog, { foreignKey: "userId", as: "auditLogs" });
+
+// Organization has many audit logs
+Organization.hasMany(AuditLog, { foreignKey: "orgId", as: "auditLogs" });
 
 // Workflow relationships
 DocumentWorkflow.belongsTo(User, { foreignKey: "changedByUserId" });
