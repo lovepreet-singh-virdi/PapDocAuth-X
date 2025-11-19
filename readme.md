@@ -594,9 +594,9 @@ Create the initial superadmin account (one-time setup).
 ```json
 {
     "email": "admin@example.com",
-    "password": "SecurePassword123!",
+    "password": "<REDACTED_SAMPLE_PASSWORD>",
     "fullName": "System Administrator",
-    "setupToken": "your-secret-setup-token"
+    "setupToken": "<REDACTED_SETUP_TOKEN>"
 }
 ```
 
@@ -621,7 +621,7 @@ Authenticate user and receive JWT token.
 ```json
 {
     "email": "admin@university.edu",
-    "password": "YourPassword123!"
+    "password": "<REDACTED_SAMPLE_PASSWORD>"
 }
 ```
 
@@ -629,7 +629,7 @@ Authenticate user and receive JWT token.
 ```json
 {
     "success": true,
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "token": "<REDACTED_JWT_SAMPLE>",
     "user": {
         "id": "uuid",
         "email": "admin@university.edu",
@@ -688,7 +688,7 @@ Create admin user for an organization (SUPERADMIN only).
 {
     "email": "registrar@stanford.edu",
     "fullName": "Stanford Registrar",
-    "password": "AdminPassword123!"
+    "password": "<REDACTED_SAMPLE_PASSWORD>"
 }
 ```
 
@@ -1609,7 +1609,7 @@ INSERT INTO roles (name, description) VALUES
 ```javascript
 {
     email: "admin@example.com",  // Change in seed config
-    passwordHash: bcrypt.hash("ChangeMe123!"),
+    passwordHash: bcrypt.hash("<REDACTED_SAMPLE_PASSWORD>"),
     roles: ["SUPERADMIN"]
 }
 ```
@@ -1636,7 +1636,7 @@ INSERT INTO roles (name, description) VALUES
 ```javascript
 {
     email: "admin@example.edu",
-    passwordHash: bcrypt.hash("AdminPass123!"),
+    passwordHash: bcrypt.hash("<REDACTED_SAMPLE_PASSWORD>"),
     orgId: <example-university-id>,
     roles: ["ADMIN"]
 }
@@ -1662,7 +1662,7 @@ Edit `database/seeds/config.json`:
 {
     "superadmin": {
         "email": "youradmin@yourdomain.com",
-        "password": "YourSecurePassword123!",
+        "password": "<REDACTED_SAMPLE_PASSWORD>",
         "fullName": "System Administrator"
     },
     "organizations": [
@@ -1968,7 +1968,7 @@ SOFTWARE.
 - **Documentation**: [https://github.com/lovepreet-singh-virdi/PapDocAuth-X#readme](https://github.com/lovepreet-singh-virdi/PapDocAuth-X#readme)
 - **Issues**: [GitHub Issues](https://github.com/lovepreet-singh-virdi/PapDocAuth-X/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/lovepreet-singh-virdi/PapDocAuth-X/discussions)
-- **Email**: lovepreetsinghvirdi001@gmail.com
+- **Contact**: Use the repository Issues page for support:https://github.com/lovepreet-singh-virdi/PapDocAuth-X/issues
 
 ---
 
