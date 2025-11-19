@@ -18,7 +18,7 @@ const startServer = async () => {
   console.log("🟦 SQL tables synchronized");
 
   app.listen(env.port, () => {
-    console.log(`🚀 PapDocAuthX v2 server running on port ${env.port}`);
+    console.log(`🚀 ${env.appName} v${env.appVersion} server running on port ${env.port}`);
   });
 };
 startServer();

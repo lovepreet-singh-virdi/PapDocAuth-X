@@ -2,6 +2,8 @@ import dotenv from "dotenv";
 dotenv.config(); // Load .env BEFORE reading anything
 
 export const env = {
+  appName: process.env.APP_NAME || "PapDocAuthX",
+  appVersion: process.env.APP_VERSION || "2",
   port: process.env.PORT || 4000,
 
   mongoUri: process.env.MONGO_URI,
@@ -24,7 +26,11 @@ export const env = {
   allowSuperadminRegistration:
     process.env.ALLOW_SUPERADMIN_REGISTRATION || "false",
 
-  setupKey: process.env.SETUP_KEY || null
+  setupKey: process.env.SETUP_KEY || null,
+
+  superadminEmail: process.env.SUPERADMIN_EMAIL || "superadmin@papdocauthx.com",
+  defaultAdminPassword: process.env.DEFAULT_ADMIN_PASSWORD || "Admin@123",
+  defaultUserPassword: process.env.DEFAULT_USER_PASSWORD || "User@123"
 };
 
 console.log("DEBUG MONGO URI:", process.env.MONGO_URI);
