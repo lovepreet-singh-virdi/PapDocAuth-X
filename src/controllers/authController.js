@@ -1,4 +1,4 @@
-import { registerSuperadmin, login } from "../services/authService.js";
+import { registerSuperadmin, login, checkSuperadminExists, getAllUsers } from "../services/authService.js";
 
 export const authController = {
   registerSuperadmin: async (req, res, next) => {
@@ -39,6 +39,31 @@ export const authController = {
           role: user.role,
           orgId: user.orgId,
         },
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  checkSuperadminStatus: async (req, res, next) => {
+    try {
+      const exists = await checkSuperadminExists();
+      res.json({
+        success: true,
+        superadminExists: exists,
+        registrationLocked: exists
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  getAllUsers: async (req, res, next) => {
+    try {
+      const users = await getAllUsers();
+      res.json({
+        success: true,
+        users,
       });
     } catch (err) {
       next(err);

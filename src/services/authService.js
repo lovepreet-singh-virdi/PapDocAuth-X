@@ -1,7 +1,18 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { User } from "../models/sql/User.js";
+import { Organization } from "../models/sql/Organization.js";
 import { env } from "../config/env.js";
+
+/**
+ * Check if superadmin already exists
+ */
+export async function checkSuperadminExists() {
+  const superadminExists = await User.findOne({
+    where: { role: "superadmin" }
+  });
+  return !!superadminExists;
+}
 
 /**
  * Create superadmin (secured)
@@ -19,12 +30,10 @@ export async function registerSuperadmin({ fullName, email, password, setupKey }
   }
 
   // SELF-LOCKING: only allow when no superadmin exists
-  const superadminExists = await User.findOne({
-    where: { role: "superadmin" }
-  });
+  const superadminExists = await checkSuperadminExists();
 
   if (superadminExists) {
-    throw new Error("Superadmin already initialized");
+    throw new Error("Superadmin already initialized. This endpoint is permanently locked.");
   }
 
   const passwordHash = await bcrypt.hash(password, 10);
@@ -70,4 +79,19 @@ const user = await User.findOne({
   );
 
   return { token, user };
+}
+
+/**
+ * Get all users (superadmin only)
+ */
+export async function getAllUsers() {
+  return await User.findAll({
+    attributes: ['id', 'fullName', 'email', 'role', 'orgId', 'createdAt'],
+    include: [{
+      model: Organization,
+      as: 'organization',
+      attributes: ['id', 'name', 'slug']
+    }],
+    order: [['createdAt', 'DESC']],
+  });
 }

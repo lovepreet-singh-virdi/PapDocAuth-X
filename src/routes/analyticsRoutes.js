@@ -1,9 +1,16 @@
 import { Router } from "express";
 import { analyticsController } from "../controllers/analyticsController.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
+import { checkRole } from "../middleware/checkRole.js";
 
 const router = Router();
 
-router.get("/summary", authMiddleware, analyticsController.summary);
+// Admin and superadmin can view analytics
+router.get(
+  "/summary",
+  authMiddleware,
+  checkRole(["admin", "superadmin"]),
+  analyticsController.summary
+);
 
 export default router;

@@ -3,6 +3,46 @@ import { Organization } from "../models/sql/Organization.js";
 import { User } from "../models/sql/User.js";
 
 /**
+ * Get all organizations.
+ */
+export async function getAllOrganizations() {
+  return await Organization.findAll({
+    order: [['createdAt', 'DESC']],
+  });
+}
+
+/**
+ * Get all admins for a specific organization.
+ */
+export async function getOrganizationAdmins(orgId) {
+  const org = await Organization.findByPk(orgId);
+  if (!org) throw new Error("Organization not found");
+
+  return await User.findAll({
+    where: {
+      orgId,
+      role: 'admin',
+    },
+    attributes: ['id', 'fullName', 'email', 'role', 'createdAt'],
+    order: [['createdAt', 'DESC']],
+  });
+}
+
+/**
+ * Get all users in a specific organization (admins and users)
+ */
+export async function getOrganizationUsers(orgId) {
+  const org = await Organization.findByPk(orgId);
+  if (!org) throw new Error("Organization not found");
+
+  return await User.findAll({
+    where: { orgId },
+    attributes: ['id', 'fullName', 'email', 'role', 'createdAt'],
+    order: [['createdAt', 'DESC']],
+  });
+}
+
+/**
  * Create a new organization.
  * Ensures unique organization name.
  */

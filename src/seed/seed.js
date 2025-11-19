@@ -6,6 +6,9 @@ import { connectMongo } from "../config/dbMongo.js";
 import { connectPostgres, sequelize } from "../config/dbPostgres.js";
 import { Organization } from "../models/sql/Organization.js";
 import { User } from "../models/sql/User.js";
+import { env } from "../config/env.js";
+import { Document } from "../models/mongo/Document.js";
+import { DocumentVersion } from "../models/mongo/DocumentVersion.js";
 
 // Load models
 import "../models/sql/index.js";
@@ -20,11 +23,11 @@ import "../models/sql/index.js";
         await sequelize.sync({ alter: true });
 
         // 1. Seed Superadmin
-        const superEmail = "superadmin@papdocauthx.com";
+        const superEmail = env.superadminEmail;
         let superadmin = await User.findOne({ where: { email: superEmail } });
 
         if (!superadmin) {
-            const passwordHash = await bcrypt.hash("Admin@123", 10);
+            const passwordHash = await bcrypt.hash(env.defaultAdminPassword, 10);
             superadmin = await User.create({
                 fullName: "Seed Superadmin",
                 email: superEmail,
@@ -42,6 +45,8 @@ import "../models/sql/index.js";
             { name: "University of Windsor", type: "university" },
             { name: "ABC Corporate", type: "company" },
             { name: "Panjab University", type: "university" },
+            { name: "TechStart Inc", type: "company" },
+            { name: "Healthcare Plus", type: "healthcare" },
         ];
 
         const orgRecords = [];
@@ -69,7 +74,7 @@ import "../models/sql/index.js";
 
             let admin = await User.findOne({ where: { email } });
             if (!admin) {
-                const passwordHash = await bcrypt.hash("Admin@123", 10);
+                const passwordHash = await bcrypt.hash(env.defaultAdminPassword, 10);
 
                 admin = await User.create({
                     fullName: `${org.name} Admin`,
@@ -85,7 +90,109 @@ import "../models/sql/index.js";
             }
         }
 
+        // 4. Seed Regular Users (Verifiers) for each org
+        for (const org of orgRecords) {
+            const users = [
+                { 
+                    fullName: `${org.name} Verifier`, 
+                    email: `user@${org.name.replaceAll(" ", "").toLowerCase()}.com` 
+                },
+                { 
+                    fullName: `${org.name} Staff`, 
+                    email: `staff@${org.name.replaceAll(" ", "").toLowerCase()}.com` 
+                },
+            ];
+
+            for (const userData of users) {
+                let user = await User.findOne({ where: { email: userData.email } });
+                if (!user) {
+                    const passwordHash = await bcrypt.hash(env.defaultUserPassword, 10);
+
+                    user = await User.create({
+                        fullName: userData.fullName,
+                        email: userData.email,
+                        passwordHash,
+                        role: "user",
+                        orgId: org.id,
+                    });
+
+                    console.log(`✔ Created user: ${userData.fullName}`);
+                } else {
+                    console.log(`• User exists: ${userData.fullName}`);
+                }
+            }
+        }
+
+        // 5. Seed Sample Documents for first organization
+        const firstOrg = orgRecords[0];
+        const adminUser = await User.findOne({ where: { orgId: firstOrg.id, role: 'admin' } });
+
+        if (adminUser) {
+            const sampleDocs = [
+                {
+                    docId: `DOC-${Date.now()}-001`,
+                    type: "transcript",
+                    title: "Student Transcript - John Doe",
+                    hash: "0x" + "a".repeat(64),
+                },
+                {
+                    docId: `DOC-${Date.now()}-002`,
+                    type: "certificate",
+                    title: "Degree Certificate - Jane Smith",
+                    hash: "0x" + "b".repeat(64),
+                },
+                {
+                    docId: `DOC-${Date.now()}-003`,
+                    type: "letter",
+                    title: "Employment Letter",
+                    hash: "0x" + "c".repeat(64),
+                },
+            ];
+
+            for (const docData of sampleDocs) {
+                const existingDoc = await Document.findOne({ docId: docData.docId });
+                if (!existingDoc) {
+                    const doc = await Document.create({
+                        docId: docData.docId,
+                        type: docData.type,
+                        ownerOrgId: firstOrg.id,
+                        currentVersion: 1,
+                        metadata: {
+                            fileType: "pdf",
+                            pageCount: Math.floor(Math.random() * 10) + 1,
+                            sizeInKB: Math.floor(Math.random() * 500) + 100,
+                            mimeType: "application/pdf",
+                        },
+                        versionHashChain: [docData.hash],
+                    });
+
+                    // Create initial version
+                    await DocumentVersion.create({
+                        docId: docData.docId,
+                        versionNumber: 1,
+                        merkleRoot: docData.hash,
+                        versionHash: docData.hash,
+                        prevVersionHash: null,
+                        workflowStatus: "APPROVED",
+                        createdByUserId: adminUser.id,
+                        ownerOrgId: firstOrg.id,
+                    });
+
+                    console.log(`✔ Created document: ${docData.title}`);
+                } else {
+                    console.log(`• Document exists: ${docData.docId}`);
+                }
+            }
+        }
+
         console.log("🎉 Safe seeding completed.");
+        console.log("\n📊 Summary:");
+        console.log(`   Organizations: ${orgRecords.length}`);
+        const totalUsers = await User.count();
+        console.log(`   Total Users: ${totalUsers}`);
+        const totalDocs = await Document.countDocuments();
+        console.log(`   Documents: ${totalDocs}`);
+        
         process.exit(0);
     } catch (err) {
         console.error("❌ Seeder error:", err);
