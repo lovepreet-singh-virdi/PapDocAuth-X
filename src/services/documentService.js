@@ -6,11 +6,18 @@ import { addAuditEntry } from "./auditService.js";
 
 /**
  * Compute Merkle Root from the 4 multimodal hashes
+ * Filters out empty hashes before computing
  */
 function computeMerkleRoot({ textHash, imageHash, signatureHash, stampHash }) {
     const leaves = [textHash, imageHash, signatureHash, stampHash]
+        .filter(h => h && h.trim() !== "") // Filter out empty hashes
         .map(h => crypto.createHash("sha256").update(h).digest("hex"))
         .sort(); // Ensure deterministic ordering
+
+    // If no valid hashes, use the first non-empty one or empty string
+    if (leaves.length === 0) {
+        return crypto.createHash("sha256").update("").digest("hex");
+    }
 
     const concat = leaves.join("");
     return crypto.createHash("sha256").update(concat).digest("hex");
@@ -22,6 +29,112 @@ function computeMerkleRoot({ textHash, imageHash, signatureHash, stampHash }) {
 function computeVersionHash(prevHash, merkleRoot) {
     const base = prevHash ? prevHash + merkleRoot : merkleRoot;
     return crypto.createHash("sha256").update(base).digest("hex");
+}
+
+/**
+ * Get all documents for an organization
+ * Superadmin can see all, Admin/User see their org only
+ */
+export async function getAllDocuments({ orgId, role }) {
+    const filter = role === 'superadmin' ? {} : { ownerOrgId: orgId };
+    
+    const documents = await Document.find(filter)
+        .sort({ createdAt: -1 })
+        .lean();
+    
+    // Get latest version info for each document
+    const enrichedDocs = await Promise.all(
+        documents.map(async (doc) => {
+            const latestVersion = await DocumentVersion.findOne({
+                docId: doc.docId,
+                versionNumber: doc.currentVersion
+            }).lean();
+            
+            return {
+                ...doc,
+                latestVersionStatus: latestVersion?.workflowStatus || 'UNKNOWN',
+                latestVersionHash: latestVersion?.versionHash,
+                createdBy: latestVersion?.createdByUserId
+            };
+        })
+    );
+    
+    return enrichedDocs;
+}
+
+/**
+ * Get document details with all versions
+ */
+export async function getDocumentDetails({ docId, orgId, role }) {
+    const doc = await Document.findOne({ docId }).lean();
+    
+    if (!doc) {
+        throw new Error('Document not found');
+    }
+    
+    // Check access rights
+    if (role !== 'superadmin' && doc.ownerOrgId !== orgId) {
+        throw new Error('Access denied to this document');
+    }
+    
+    // Get all versions
+    const versions = await DocumentVersion.find({ docId })
+        .sort({ versionNumber: -1 })
+        .lean();
+    
+    // Get hash parts for latest version
+    const latestHashParts = await HashPart.findOne({
+        docId,
+        versionNumber: doc.currentVersion
+    }).lean();
+    
+    return {
+        ...doc,
+        versions,
+        latestHashParts
+    };
+}
+
+/**
+ * Get all versions for a document
+ */
+export async function getDocumentVersions({ docId, orgId, role }) {
+    const doc = await Document.findOne({ docId }).lean();
+    
+    if (!doc) {
+        throw new Error('Document not found');
+    }
+    
+    // Check access rights
+    if (role !== 'superadmin' && doc.ownerOrgId !== orgId) {
+        throw new Error('Access denied to this document');
+    }
+    
+    const versions = await DocumentVersion.find({ docId })
+        .sort({ versionNumber: -1 })
+        .lean();
+    
+    // Get hash parts for each version
+    const versionsWithHashes = await Promise.all(
+        versions.map(async (version) => {
+            const hashParts = await HashPart.findOne({
+                docId,
+                versionNumber: version.versionNumber
+            }).lean();
+            
+            return {
+                ...version,
+                hashes: hashParts ? {
+                    textHash: hashParts.textHash,
+                    imageHash: hashParts.imageHash,
+                    signatureHash: hashParts.signatureHash,
+                    stampHash: hashParts.stampHash
+                } : null
+            };
+        })
+    );
+    
+    return versionsWithHashes;
 }
 
 /**

@@ -15,10 +15,10 @@ const startServer = async () => {
 
   // Sync SQL tables (dev only)
   await sequelize.sync({ alter: true });
-  console.log("🟦 SQL tables synchronized");
+  console.log("SQL tables synchronized");
 
   app.listen(env.port, () => {
-    console.log(`🚀 ${env.appName} v${env.appVersion} server running on port ${env.port}`);
+    console.log(`${env.appName} v${env.appVersion} server running on port ${env.port}`);
   });
 };
 startServer();

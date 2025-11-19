@@ -7,6 +7,7 @@ import verificationRoutes from "./verificationRoutes.js";
 import qrRoutes from "./qrRoutes.js";
 import publicVerifyRoutes from "./publicVerifyRoutes.js";
 import analyticsRoutes from "./analyticsRoutes.js";
+import auditRoutes from "./auditRoutes.js";
 
 const router = Router();
 
@@ -17,5 +18,6 @@ router.use("/verification", verificationRoutes);
 router.use("/qr", qrRoutes);
 router.use("/public", publicVerifyRoutes);
 router.use("/analytics", analyticsRoutes);
+router.use("/audit", auditRoutes);
 
 export default router;
