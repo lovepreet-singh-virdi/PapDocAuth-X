@@ -1,4 +1,5 @@
 import { body, param, query, validationResult } from 'express-validator';
+import { USER_ROLES } from '../constants/enums.js';
 
 /**
  * Middleware to check validation results and return errors
@@ -41,7 +42,7 @@ export const validateUserRegistration = [
   
   body('role')
     .optional()
-    .isIn(['admin', 'user', 'verifier']).withMessage('Invalid role'),
+    .isIn([USER_ROLES.ADMIN, USER_ROLES.VERIFIER]).withMessage('Invalid role'),
   
   body('orgId')
     .optional()

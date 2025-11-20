@@ -218,7 +218,7 @@ export async function uploadDocumentVersion({
                 orgId,
                 docId,
                 versionNumber,
-                action: "UPLOAD_VERSION",
+                action: "UPLOAD",
                 details: `Document version ${versionNumber} uploaded and auto-approved`,
             });
 

@@ -3,6 +3,23 @@
 ## Overview
 This directory contains advanced database migrations implementing indexes, partitioning, stored procedures, triggers, and materialized views for the PapDocAuthX system.
 
+## Quick Commands
+
+Short, copy/paste commands to run common migration tasks from the repository root:
+
+```powershell
+# Run all primary migrations (adjust DB name/credentials as needed)
+psql -U postgres -d papdocauthxv2 -f migrations/001_add_indexes.sql
+psql -U postgres -d papdocauthxv2 -f migrations/002_partition_audit_logs.sql
+psql -U postgres -d papdocauthxv2 -f migrations/003_stored_procedures.sql
+psql -U postgres -d papdocauthxv2 -f migrations/004_triggers.sql
+psql -U postgres -d papdocauthxv2 -f migrations/005_materialized_views.sql
+
+# Quick verify examples
+psql -U postgres -d papdocauthxv2 -c "SELECT tablename FROM pg_tables WHERE schemaname = 'public' LIMIT 20;"
+psql -U postgres -d papdocauthxv2 -c "SELECT matviewname FROM pg_matviews;"
+```
+
 ## Migration Files
 
 ### 001_add_indexes.sql

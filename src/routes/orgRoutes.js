@@ -3,6 +3,7 @@ import { orgController } from "../controllers/orgController.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 import { checkRole } from "../middleware/checkRole.js";
 import { validateOrganizationCreation, validateUserRegistration, validateIdParam, validatePagination } from "../middleware/validationMiddleware.js";
+import { USER_ROLES } from "../constants/enums.js";
 
 const router = Router();
 
@@ -12,7 +13,7 @@ const router = Router();
 router.get(
   "/",
   authMiddleware,
-  checkRole(["superadmin"]),
+  checkRole([USER_ROLES.SUPERADMIN]),
   validatePagination,
   orgController.getAllOrgs
 );
@@ -21,7 +22,7 @@ router.get(
 router.get(
   "/:orgId/admins",
   authMiddleware,
-  checkRole(["superadmin"]),
+  checkRole([USER_ROLES.SUPERADMIN]),
   validateIdParam('orgId'),
   validatePagination,
   orgController.getOrgAdmins
@@ -31,7 +32,7 @@ router.get(
 router.get(
   "/:orgId/users",
   authMiddleware,
-  checkRole(["admin", "superadmin"]),
+  checkRole([USER_ROLES.ADMIN, USER_ROLES.SUPERADMIN]),
   validateIdParam('orgId'),
   validatePagination,
   orgController.getOrgUsers
@@ -41,7 +42,7 @@ router.get(
 router.post(
   "/",
   authMiddleware,
-  checkRole(["superadmin"]),
+  checkRole([USER_ROLES.SUPERADMIN]),
   validateOrganizationCreation,
   orgController.createOrg
 );
@@ -50,10 +51,20 @@ router.post(
 router.post(
   "/:orgId/admins",
   authMiddleware,
-  checkRole(["superadmin"]),
+  checkRole([USER_ROLES.SUPERADMIN]),
   validateIdParam('orgId'),
   validateUserRegistration,
   orgController.createOrgAdmin
+);
+
+// Create organization verifier (admin can create in their org, superadmin in any org)
+router.post(
+  "/:orgId/users",
+  authMiddleware,
+  checkRole([USER_ROLES.ADMIN, USER_ROLES.SUPERADMIN]),
+  validateIdParam('orgId'),
+  validateUserRegistration,
+  orgController.createOrgVerifier
 );
 
 export default router;

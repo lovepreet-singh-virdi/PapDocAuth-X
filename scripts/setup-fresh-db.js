@@ -43,11 +43,11 @@ async function runMigrations() {
     console.log('Step 1: Connecting to databases...');
     await client.connect();
     await connectMongo();
-    console.log('✓ Connected to Postgres and MongoDB\n');
+    console.log('Connected to Postgres and MongoDB\n');
 
     console.log('Step 2: Running Sequelize sync to create base tables...');
     await sequelize.sync({ force: false }); // Create tables that don't exist
-    console.log('✓ Base SQL tables created\n');
+    console.log('Base SQL tables created\n');
 
     console.log('Step 3: Running migration files...');
     const files = await fs.readdir(migrationsDir);
@@ -59,9 +59,9 @@ async function runMigrations() {
       console.log(`  Running ${file}...`);
       const sql = await fs.readFile(path.join(migrationsDir, file), 'utf8');
       await client.query(sql);
-      console.log(`  ✓ ${file} completed`);
+      console.log(`  ${file} completed`);
     }
-    console.log('✓ All migrations applied\n');
+    console.log('All migrations applied\n');
 
     await client.end();
 
@@ -73,7 +73,7 @@ async function runMigrations() {
     process.exit = function(code) {
       seedExitCode = code;
       if (code !== 0) {
-        console.error(`\n✗ Seeder failed with exit code ${code}`);
+        console.error(`\nSeeder failed with exit code ${code}`);
         originalExit(code);
       }
     };
@@ -96,7 +96,7 @@ async function runMigrations() {
     process.exit(0);
 
   } catch (err) {
-    console.error('\n✗ Setup failed:', err.message);
+    console.error('\nSetup failed:', err.message);
     console.error(err.stack);
     process.exit(1);
   }

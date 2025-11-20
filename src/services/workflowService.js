@@ -3,6 +3,7 @@ import { User } from "../models/sql/User.js";
 import { Document } from "../models/mongo/Document.js";
 import { DocumentVersion } from "../models/mongo/DocumentVersion.js";
 import { addAuditEntry } from "./auditService.js";
+import { USER_ROLES, WORKFLOW_STATUS } from "../constants/enums.js";
 
 /**
  * Change document workflow state
@@ -32,11 +33,11 @@ export async function changeWorkflowState({ userId, orgId, documentId, versionNu
 
   // Update version status in MongoDB
   version.workflowStatus = state;
-  if (state === "REVOKED") {
+  if (state === WORKFLOW_STATUS.REVOKED) {
     version.revokedAt = new Date();
     version.revokedByUserId = userId;
     version.revocationReason = reason || "No reason provided";
-  } else if (state === "PENDING") {
+  } else if (state === WORKFLOW_STATUS.PENDING) {
     // Clear revocation fields if moving to PENDING
     version.revokedAt = undefined;
     version.revokedByUserId = undefined;
@@ -54,6 +55,9 @@ export async function changeWorkflowState({ userId, orgId, documentId, versionNu
   });
 
   // Add audit entry
+  // Use document's ownerOrgId for audit log (handles superadmin case where user orgId is null)
+  const auditOrgId = orgId || document.ownerOrgId;
+  
   const actionMap = {
     APPROVED: "APPROVE",
     REVOKED: "REVOKE",
@@ -62,7 +66,7 @@ export async function changeWorkflowState({ userId, orgId, documentId, versionNu
   
   await addAuditEntry({
     userId,
-    orgId,
+    orgId: auditOrgId,
     docId: documentId,
     versionNumber: version.versionNumber,
     action: actionMap[state],
@@ -88,7 +92,7 @@ export async function getWorkflowHistory({ documentId, orgId, role }) {
   }
 
   // Admin can only view their org's documents
-  if (role !== "superadmin" && document.ownerOrgId !== orgId) {
+  if (role !== USER_ROLES.SUPERADMIN && document.ownerOrgId !== orgId) {
     throw new Error("Access denied to this document");
   }
 

@@ -2,6 +2,7 @@ import crypto from "crypto";
 import { Document } from "../models/mongo/Document.js";
 import { DocumentVersion } from "../models/mongo/DocumentVersion.js";
 import { addAuditEntry } from "./auditService.js";
+import { WORKFLOW_STATUS } from "../constants/enums.js";
 
 function computeMerkleRoot({ textHash, imageHash, signatureHash, stampHash }) {
   const leaves = [textHash, imageHash, signatureHash, stampHash]
@@ -40,7 +41,7 @@ export async function verifyDocument({
   // Step 3: Load latest APPROVED version
   const latest = await DocumentVersion.findOne({
     docId,
-    workflowStatus: "APPROVED"
+    workflowStatus: WORKFLOW_STATUS.APPROVED
   }).sort({ versionNumber: -1 });
 
   if (!latest) {
@@ -64,7 +65,7 @@ export async function verifyDocument({
   const revokedVersion = await DocumentVersion.findOne({
     docId,
     versionNumber,
-    workflowStatus: "REVOKED"
+    workflowStatus: WORKFLOW_STATUS.REVOKED
   });
 
   const isRevoked = Boolean(revokedVersion);
@@ -75,15 +76,15 @@ export async function verifyDocument({
     orgId,
     docId,
     versionNumber,
-    action: "CRYPTO_CHECK",
-    details: `crypto-check performed on version ${versionNumber}`
+    action: "VERIFIED",
+    details: `Verification performed on version ${versionNumber}`
   });
 
   return {
     exists: true,
     latestVersion: versionNumber,
     cryptographicallyAuthentic,
-    isApprovedByAuthority: workflowStatus === "APPROVED",
+    isApprovedByAuthority: workflowStatus === WORKFLOW_STATUS.APPROVED,
     isRevoked,
     workflowStatus
   };

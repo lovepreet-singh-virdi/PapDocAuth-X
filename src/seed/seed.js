@@ -9,6 +9,7 @@ import { User } from "../models/sql/User.js";
 import { env } from "../config/env.js";
 import { Document } from "../models/mongo/Document.js";
 import { DocumentVersion } from "../models/mongo/DocumentVersion.js";
+import { USER_ROLES } from "../constants/enums.js";
 
 // Load models
 import "../models/sql/index.js";
@@ -37,7 +38,7 @@ import "../models/sql/index.js";
                 fullName: "Seed Superadmin",
                 email: superEmail,
                 passwordHash,
-                role: "superadmin",
+                role: USER_ROLES.SUPERADMIN,
                 orgId: null,
             });
             console.log("Superadmin created");
@@ -95,7 +96,7 @@ import "../models/sql/index.js";
                     fullName: `${org.name} Admin`,
                     email,
                     passwordHash,
-                    role: "admin",
+                    role: USER_ROLES.ADMIN,
                     orgId: org.id,
                 });
 
@@ -139,7 +140,7 @@ import "../models/sql/index.js";
                         fullName: userData.fullName,
                         email: userData.email,
                         passwordHash,
-                        role: "verifier",
+                        role: USER_ROLES.VERIFIER,
                         orgId: org.id,
                     });
 
@@ -155,8 +156,8 @@ import "../models/sql/index.js";
         const workflowStatuses = ["APPROVED", "PENDING", "REVOKED"];
         
         for (const org of orgRecords) {
-            const adminUser = await User.findOne({ where: { orgId: org.id, role: 'admin' } });
-            const regularUsers = await User.findAll({ where: { orgId: org.id, role: 'verifier' } });
+            const adminUser = await User.findOne({ where: { orgId: org.id, role: USER_ROLES.ADMIN } });
+            const regularUsers = await User.findAll({ where: { orgId: org.id, role: USER_ROLES.VERIFIER } });
             
             if (adminUser && regularUsers.length > 0) {
                 // Create 15-25 documents per organization

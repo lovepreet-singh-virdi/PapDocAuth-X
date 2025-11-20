@@ -28,7 +28,7 @@ User.init(
     },
 
     role: {
-      type: DataTypes.ENUM("superadmin", "admin", "user"),
+      type: DataTypes.ENUM("superadmin", "admin", "verifier"),
       allowNull: false,
     },
 

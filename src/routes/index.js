@@ -11,6 +11,7 @@ import analyticsRoutes from "./analyticsRoutes.js";
 import auditRoutes from "./auditRoutes.js";
 import workflowRoutes from "./workflowRoutes.js";
 import metadataRoutes from "./metadataRoutes.js";
+import accessRequestRoutes from "./accessRequestRoutes.js";
 
 const router = Router();
 
@@ -25,5 +26,6 @@ router.use("/analytics", analyticsRoutes);
 router.use("/audit", auditRoutes);
 router.use("/workflow", workflowRoutes);
 router.use("/metadata", metadataRoutes);
+router.use("/access-requests", accessRequestRoutes);
 
 export default router;

@@ -53,3 +53,18 @@ npm run dev
 - If a request returns 401: ensure `Login` was run and `jwt` variable is set.
 - If `orgId` or `docId` is empty after running creation endpoints: check response body and adjust Tests script accordingly.
 - If backend not reachable: ensure `npm run dev` is running and `baseUrl` points to the correct host and port.
+
+## Quick Commands
+
+Copy/paste these quick commands while running local demos:
+
+```powershell
+# Start backend (dev)
+npm install
+npm run dev
+
+# Run Postman collection via Newman (optional, install newman globally first)
+npx newman run postman_collection.json -e postman_environment.json --delay-request 200
+
+# Open Postman: Import the two JSON files and select the `PapDocAuthX Local` environment
+```

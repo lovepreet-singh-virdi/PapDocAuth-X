@@ -5,39 +5,90 @@ import { DocumentVersion } from "../models/mongo/DocumentVersion.js";
 
 export const analyticsService = {
   summary: async () => {
-    const [
+    // Get global document stats across all organizations
+    const totalDocs = await Document.countDocuments();
+    
+    const docsByStatus = await DocumentVersion.aggregate([
+      {
+        $group: {
+          _id: '$workflowStatus',
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    const statusMap = docsByStatus.reduce((acc, item) => {
+      acc[item._id.toLowerCase()] = item.count;
+      return acc;
+    }, {});
+
+    // Get user stats
+    const [totalUsers, usersByRole, usersByOrg] = await Promise.all([
+      sqlAnalyticsService.totalUsers(),
+      sqlAnalyticsService.usersByRole(),
+      sqlAnalyticsService.usersByOrganization()
+    ]);
+
+    // Get last 5 days throughput data
+    const fiveDaysAgo = new Date();
+    fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
+
+    const recentDocs = await DocumentVersion.aggregate([
+      { $match: { createdAt: { $gte: fiveDaysAgo } }},
+      {
+        $group: {
+          _id: {
+            date: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+            status: '$workflowStatus'
+          },
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { '_id.date': 1 } }
+    ]);
+
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const last5Days = [];
+    for (let i = 4; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const dayName = dayNames[date.getDay()];
+      const dateStr = date.toISOString().split('T')[0];
+      
+      const dayDocs = recentDocs.filter(d => d._id.date === dateStr);
+      last5Days.push({
+        name: dayName,
+        approved: dayDocs.find(d => d._id.status === 'APPROVED')?.count || 0,
+        pending: dayDocs.find(d => d._id.status === 'PENDING')?.count || 0
+      });
+    }
+
+    return {
+      totalDocuments: totalDocs,
+      approved: statusMap.approved || 0,
+      pending: statusMap.pending || 0,
+      revoked: statusMap.revoked || 0,
       totalUsers,
       usersByRole,
       usersByOrg,
-      totalDocs,
-      docsByOrg,
-      versionCounts,
-      revoked,
-      active
-    ] = await Promise.all([
-      sqlAnalyticsService.totalUsers(),
-      sqlAnalyticsService.usersByRole(),
-      sqlAnalyticsService.usersByOrganization(),
-      mongoAnalyticsService.totalDocuments(),
-      mongoAnalyticsService.docsByOrg(),
-      mongoAnalyticsService.versionCounts(),
-      mongoAnalyticsService.revokedDocuments(),
-      mongoAnalyticsService.activeDocuments()
-    ]);
-
-    return {
-      sql: {
-        totalUsers,
-        usersByRole,
-        usersByOrg
-      },
-      mongo: {
-        totalDocs,
-        docsByOrg,
-        versionCounts,
-        active,
-        revoked
-      }
+      throughputData: last5Days,
+      pieData: [
+        { 
+          name: 'Approved', 
+          value: statusMap.approved || 0, 
+          percentage: totalDocs ? Math.round((statusMap.approved || 0) / totalDocs * 100) : 0 
+        },
+        { 
+          name: 'Pending', 
+          value: statusMap.pending || 0,
+          percentage: totalDocs ? Math.round((statusMap.pending || 0) / totalDocs * 100) : 0
+        },
+        { 
+          name: 'Revoked', 
+          value: statusMap.revoked || 0,
+          percentage: totalDocs ? Math.round((statusMap.revoked || 0) / totalDocs * 100) : 0
+        }
+      ]
     };
   },
 
@@ -110,12 +161,58 @@ export const analyticsService = {
       };
     });
 
+    // Get last 5 days for throughput chart
+    const fiveDaysAgo = new Date();
+    fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
+
+    const recentDocs = await DocumentVersion.aggregate([
+      {
+        $lookup: {
+          from: 'documents',
+          localField: 'docId',
+          foreignField: 'docId',
+          as: 'document'
+        }
+      },
+      { $unwind: '$document' },
+      { $match: { 
+        'document.ownerOrgId': orgId,
+        createdAt: { $gte: fiveDaysAgo }
+      }},
+      {
+        $group: {
+          _id: {
+            date: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+            status: '$workflowStatus'
+          },
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { '_id.date': 1 } }
+    ]);
+
+    // Format for last 5 days throughput
+    const last5Days = [];
+    for (let i = 4; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const dayName = dayNames[date.getDay()];
+      const dateStr = date.toISOString().split('T')[0];
+      
+      const dayDocs = recentDocs.filter(d => d._id.date === dateStr);
+      last5Days.push({
+        name: dayName,
+        approved: dayDocs.find(d => d._id.status === 'APPROVED')?.count || 0,
+        pending: dayDocs.find(d => d._id.status === 'PENDING')?.count || 0
+      });
+    }
+
     return {
       totalDocuments: totalDocs,
       approved: statusMap.approved || 0,
       pending: statusMap.pending || 0,
       revoked: statusMap.revoked || 0,
-      throughputData,
+      throughputData: last5Days,
       pieData: [
         { 
           name: 'Approved', 
@@ -133,6 +230,32 @@ export const analyticsService = {
           percentage: totalDocs ? Math.round((statusMap.revoked || 0) / totalDocs * 100) : 0
         }
       ]
+    };
+  }
+  ,
+  publicSummary: async () => {
+    // Minimal, non-sensitive aggregated metrics for public pages
+    const totalDocs = await Document.countDocuments();
+
+    const docsByStatus = await DocumentVersion.aggregate([
+      {
+        $group: {
+          _id: '$workflowStatus',
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    const statusMap = docsByStatus.reduce((acc, item) => {
+      acc[item._id.toLowerCase()] = item.count;
+      return acc;
+    }, {});
+
+    return {
+      totalDocuments: totalDocs,
+      approved: statusMap.approved || 0,
+      pending: statusMap.pending || 0,
+      revoked: statusMap.revoked || 0
     };
   }
 };

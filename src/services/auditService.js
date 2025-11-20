@@ -45,10 +45,10 @@ export async function addAuditEntry({
       timestamp: timestampISO
     });
 
-    console.log(`✅ Audit logged: action=${action}, docId=${docId}, version=${versionNumber}`);
+    console.log(`Audit logged: action=${action}, docId=${docId}, version=${versionNumber}`);
     return entry;
   } catch (err) {
-    console.error("❌ CRITICAL: Audit log failed:", err);
+    console.error("CRITICAL: Audit log failed:", err);
     // CHANGED: Now throws error to ensure audit integrity
     // This prevents operations from completing if audit fails
     throw new Error(`Audit logging failed: ${err.message}`);

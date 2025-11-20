@@ -6,6 +6,7 @@ import {
 } from "../services/auditService.js";
 import { User } from "../models/sql/User.js";
 import { Organization } from "../models/sql/Organization.js";
+import { USER_ROLES } from "../constants/enums.js";
 
 export const auditController = {
   /**
@@ -13,7 +14,7 @@ export const auditController = {
    */
   getAll: async (req, res, next) => {
     try {
-      if (req.user.role !== "superadmin") {
+      if (req.user.role !== USER_ROLES.SUPERADMIN) {
         return res.status(403).json({
           success: false,
           error: "Only superadmin can view all audit logs"
@@ -60,7 +61,7 @@ export const auditController = {
       const requestedOrgId = parseInt(orgId);
 
       // Admin can only view their own org, superadmin can view any
-      if (req.user.role === "admin" && req.user.orgId !== requestedOrgId) {
+      if (req.user.role === USER_ROLES.ADMIN && req.user.orgId !== requestedOrgId) {
         return res.status(403).json({
           success: false,
           error: "You can only view audit logs for your organization"
@@ -107,7 +108,7 @@ export const auditController = {
       const logs = await getDocumentAuditLogs({ docId, limit });
 
       // Admin can only view documents from their org
-      if (req.user.role === "admin" && logs.length > 0) {
+      if (req.user.role === USER_ROLES.ADMIN && logs.length > 0) {
         const firstLog = logs[0];
         if (firstLog.orgId !== req.user.orgId) {
           return res.status(403).json({
@@ -149,7 +150,7 @@ export const auditController = {
       const requestedOrgId = parseInt(orgId);
 
       // Admin can only verify their own org
-      if (req.user.role === "admin" && req.user.orgId !== requestedOrgId) {
+      if (req.user.role === USER_ROLES.ADMIN && req.user.orgId !== requestedOrgId) {
         return res.status(403).json({
           success: false,
           error: "You can only verify audit chains for your organization"
