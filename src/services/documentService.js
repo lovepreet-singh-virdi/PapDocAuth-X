@@ -140,6 +140,7 @@ export async function getDocumentVersions({ docId, orgId, role }) {
 
 /**
  * Create new document version + hash parts + update root document
+ * Note: Uses transactions if replica set is available, otherwise falls back to sequential operations
  */
 export async function uploadDocumentVersion({
     orgId,
@@ -149,87 +150,147 @@ export async function uploadDocumentVersion({
     metadata,
     hashes,
 }) {
-    // Start MongoDB transaction for ACID compliance
-    const session = await mongoose.startSession();
+    // Check if MongoDB supports transactions (replica set or sharded cluster)
+    const supportsTransactions = mongoose.connection.readyState === 1 && 
+                                  mongoose.connection.db?.admin()?.serverInfo;
     
-    try {
-        return await session.withTransaction(async () => {
-            // 1. Check if root Document exists
-            let doc = await Document.findOne({ docId }).session(session);
-
-            // If document does not exist → create it
-            if (!doc) {
-                const [createdDoc] = await Document.create([{
-                    docId,
-                    ownerOrgId: orgId,
-                    type,
-                    metadata,
-                    currentVersion: 0,
-                    versionHashChain: [],
-                }], { session });
-                doc = createdDoc;
-            }
-
-            // 2. Determine version number
-            const versionNumber = (doc.currentVersion || 0) + 1;
-
-            // 3. Compute Merkle Root
-            const merkleRoot = computeMerkleRoot(hashes);
-
-            // 4. Compute version hash
-            const prevVersionHash =
-                versionNumber === 1 ? null : doc.versionHashChain[doc.versionHashChain.length - 1];
-
-            const versionHash = computeVersionHash(prevVersionHash, merkleRoot);
-
-            // 5. Create the DocumentVersion record
-            const [versionRecord] = await DocumentVersion.create([{
-                docId,
-                versionNumber,
-                merkleRoot,
-                prevVersionHash,
-                versionHash,
-                workflowStatus: "APPROVED",
-                createdByUserId: userId,
-                ownerOrgId: orgId
-            }], { session });
-
-            // 6. Save the hash parts
-            await HashPart.create([{
-                docId,
-                versionNumber,
-                textHash: hashes.textHash,
-                imageHash: hashes.imageHash,
-                signatureHash: hashes.signatureHash,
-                stampHash: hashes.stampHash,
-                ownerOrgId: orgId,
-                createdByUserId: userId
-            }], { session });
-
-            // 7. Update Root Document
-            doc.currentVersion = versionNumber;
-            doc.versionHashChain.push(versionHash);
-            await doc.save({ session });
-
-            // 8. Audit Log (SQL) - outside transaction to avoid distributed transaction complexity
-            // If audit fails, MongoDB transaction still commits (acceptable trade-off)
-            await addAuditEntry({
-                userId,
-                orgId,
-                docId,
-                versionNumber,
-                action: "UPLOAD",
-                details: `Document version ${versionNumber} uploaded and auto-approved`,
+    if (supportsTransactions) {
+        // Try transaction first
+        const session = await mongoose.startSession();
+        
+        try {
+            return await session.withTransaction(async () => {
+                return await performDocumentUpload({
+                    orgId, userId, docId, type, metadata, hashes, session
+                });
             });
-
-            return {
-                versionRecord,
-                merkleRoot,
-                versionHash,
-                versionNumber,
-            };
+        } catch (error) {
+            // If transaction fails due to replica set requirement, fall back
+            if (error.message?.includes('Transaction numbers are only allowed') || 
+                error.message?.includes('replica set')) {
+                console.warn('MongoDB transactions not supported, falling back to non-transactional mode');
+                return await performDocumentUpload({
+                    orgId, userId, docId, type, metadata, hashes, session: null
+                });
+            }
+            throw error;
+        } finally {
+            session.endSession();
+        }
+    } else {
+        // No transaction support, use sequential operations
+        console.warn('MongoDB transactions not supported (standalone mode), using sequential operations');
+        return await performDocumentUpload({
+            orgId, userId, docId, type, metadata, hashes, session: null
         });
-    } finally {
-        session.endSession();
     }
+}
+
+/**
+ * Internal function to perform document upload operations
+ * Works with or without transactions
+ */
+async function performDocumentUpload({ orgId, userId, docId, type, metadata, hashes, session }) {
+    // 1. Check if root Document exists
+    const query = { docId };
+    let doc = session 
+        ? await Document.findOne(query).session(session)
+        : await Document.findOne(query);
+
+    // If document does not exist → create it
+    if (!doc) {
+        const docData = {
+            docId,
+            ownerOrgId: orgId,
+            type,
+            metadata,
+            currentVersion: 0,
+            versionHashChain: [],
+        };
+        
+        if (session) {
+            const [createdDoc] = await Document.create([docData], { session });
+            doc = createdDoc;
+        } else {
+            doc = await Document.create(docData);
+        }
+    }
+
+    // 2. Determine version number
+    const versionNumber = (doc.currentVersion || 0) + 1;
+
+    // 3. Compute Merkle Root
+    const merkleRoot = computeMerkleRoot(hashes);
+
+    // 4. Compute version hash
+    const prevVersionHash =
+        versionNumber === 1 ? null : doc.versionHashChain[doc.versionHashChain.length - 1];
+
+    const versionHash = computeVersionHash(prevVersionHash, merkleRoot);
+
+    // 5. Create the DocumentVersion record
+    const versionData = {
+        docId,
+        versionNumber,
+        merkleRoot,
+        prevVersionHash,
+        versionHash,
+        workflowStatus: "APPROVED",
+        createdByUserId: userId,
+        ownerOrgId: orgId
+    };
+    
+    const versionRecord = session
+        ? (await DocumentVersion.create([versionData], { session }))[0]
+        : await DocumentVersion.create(versionData);
+
+    // 6. Save the hash parts
+    const hashPartData = {
+        docId,
+        versionNumber,
+        textHash: hashes.textHash,
+        imageHash: hashes.imageHash,
+        signatureHash: hashes.signatureHash,
+        stampHash: hashes.stampHash,
+        ownerOrgId: orgId,
+        createdByUserId: userId
+    };
+    
+    if (session) {
+        await HashPart.create([hashPartData], { session });
+    } else {
+        await HashPart.create(hashPartData);
+    }
+
+    // 7. Update Root Document
+    doc.currentVersion = versionNumber;
+    doc.versionHashChain.push(versionHash);
+    
+    if (session) {
+        await doc.save({ session });
+    } else {
+        await doc.save();
+    }
+
+    // 8. Audit Log (SQL) - always outside MongoDB transaction
+    try {
+        await addAuditEntry({
+            userId,
+            orgId,
+            docId,
+            versionNumber,
+            action: "UPLOAD",
+            details: `Document version ${versionNumber} uploaded and auto-approved`,
+        });
+    } catch (auditError) {
+        console.error('Audit log failed (non-critical):', auditError.message);
+        // Continue execution - audit failure shouldn't block document upload
+    }
+
+    return {
+        versionRecord,
+        merkleRoot,
+        versionHash,
+        versionNumber,
+    };
 }
