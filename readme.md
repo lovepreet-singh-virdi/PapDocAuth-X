@@ -152,10 +152,6 @@ Use these scripts from the `PapDocAuthX-Backend` folder.
 Notes about analytics
 - `/api/analytics/summary` is protected and returns detailed metrics for administrators.
 - `/api/analytics/public-summary` returns basic counts that are safe for the public landing page.
---
-
-If you want more documentation (detailed API examples, Postman collection, or a migration runbook), let me know and I will add it under `docs/`.
-
 ---
 
 License: MIT
