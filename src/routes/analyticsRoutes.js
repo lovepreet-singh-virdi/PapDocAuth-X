@@ -5,7 +5,10 @@ import { checkRole } from "../middleware/checkRole.js";
 
 const router = Router();
 
-// Admin and superadmin can view analytics
+// Public summary for landing page (non-sensitive aggregated counts)
+router.get("/public-summary", analyticsController.publicSummary);
+
+// Admin and superadmin can view detailed analytics
 router.get(
   "/summary",
   authMiddleware,

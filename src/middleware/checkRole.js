@@ -1,3 +1,5 @@
+import { USER_ROLES } from "../constants/enums.js";
+
 export function checkRole(allowedRoles = []) {
   return (req, res, next) => {
     if (!req.user)

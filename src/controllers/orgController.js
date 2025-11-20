@@ -1,6 +1,7 @@
 import {
   createOrganization,
   createAdminForOrg,
+  createVerifierForOrg,
   getAllOrganizations,
   getOrganizationAdmins,
   getOrganizationUsers,
@@ -63,11 +64,11 @@ export const orgController = {
   createOrgAdmin: async (req, res, next) => {
     try {
       const { orgId } = req.params;
-      const { fullName, email, password } = req.body;
+      const { name, email, password } = req.body;
 
       const admin = await createAdminForOrg({
         orgId,
-        fullName,
+        fullName: name,
         email,
         password,
       });
@@ -76,6 +77,42 @@ export const orgController = {
         success: true,
         message: "Organization admin created",
         admin,
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  createOrgVerifier: async (req, res, next) => {
+    try {
+      const { orgId } = req.params;
+      const { name, email, password } = req.body;
+
+      // Permission check: admin can only create verifiers in their own org
+      if (req.user.role === 'admin' && req.user.orgId !== parseInt(orgId)) {
+        return res.status(403).json({
+          success: false,
+          error: "You can only create verifiers in your own organization",
+        });
+      }
+
+      const verifier = await createVerifierForOrg({
+        orgId,
+        fullName: name,
+        email,
+        password,
+      });
+
+      res.status(201).json({
+        success: true,
+        message: "Verifier created successfully",
+        verifier: {
+          id: verifier.id,
+          fullName: verifier.fullName,
+          email: verifier.email,
+          role: verifier.role,
+          orgId: verifier.orgId,
+        },
       });
     } catch (err) {
       next(err);

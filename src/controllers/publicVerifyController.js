@@ -2,6 +2,7 @@ import { Document } from "../models/mongo/Document.js";
 import { DocumentVersion } from "../models/mongo/DocumentVersion.js";
 import { computeMerkleRoot, sha256 } from "../services/hashingService.js";
 import { Organization } from "../models/sql/Organization.js";
+import { WORKFLOW_STATUS } from "../constants/enums.js";
 
 export const publicVerify = async (req, res) => {
   try {
@@ -92,8 +93,8 @@ export const publicVerify = async (req, res) => {
           },
           version: {
             versionNumber: latest.versionNumber,
-            active: latest.workflowStatus === "APPROVED",
-            revoked: latest.workflowStatus === "REVOKED"
+            active: latest.workflowStatus === WORKFLOW_STATUS.APPROVED,
+            revoked: latest.workflowStatus === WORKFLOW_STATUS.REVOKED
           }
         });
       }
@@ -117,8 +118,8 @@ export const publicVerify = async (req, res) => {
       },
       version: {
         versionNumber: latest.versionNumber,
-        active: latest.workflowStatus === "APPROVED",
-        revoked: latest.workflowStatus === "REVOKED"
+        active: latest.workflowStatus === WORKFLOW_STATUS.APPROVED,
+        revoked: latest.workflowStatus === WORKFLOW_STATUS.REVOKED
       }
     };
 
@@ -131,7 +132,7 @@ export const publicVerify = async (req, res) => {
       });
     }
 
-    if (latest.workflowStatus === "REVOKED") {
+    if (latest.workflowStatus === WORKFLOW_STATUS.REVOKED) {
       return res.json({
         verified: true,
         reason: "VALID_BUT_REVOKED",

@@ -4,6 +4,7 @@ import { AuditLog } from "./AuditLog.js";
 import { DocumentWorkflow } from "./DocumentWorkflow.js";
 import { Role } from "./Role.js";
 import { UserRole } from "./UserRole.js";
+import { AccessRequest } from "./AccessRequest.js";
 
 
 // User belongs to organization
@@ -23,12 +24,20 @@ User.hasMany(AuditLog, { foreignKey: "userId", as: "auditLogs" });
 Organization.hasMany(AuditLog, { foreignKey: "orgId", as: "auditLogs" });
 
 // Workflow relationships
-DocumentWorkflow.belongsTo(User, { foreignKey: "changedByUserId" });
+DocumentWorkflow.belongsTo(User, { foreignKey: "changedByUserId", as: "changedBy" });
+User.hasMany(DocumentWorkflow, { foreignKey: "changedByUserId", as: "workflowChanges" });
+
+// AccessRequest relationships
+AccessRequest.belongsTo(User, { foreignKey: "reviewedBy", as: "reviewer" });
+User.hasMany(AccessRequest, { foreignKey: "reviewedBy", as: "reviewedRequests" });
 
 export {
   User,
   Organization,
   AuditLog,
-  DocumentWorkflow, Role, UserRole
+  DocumentWorkflow, 
+  Role, 
+  UserRole,
+  AccessRequest,
 };
 

@@ -22,7 +22,7 @@ DocumentWorkflow.init(
     },
 
     status: {
-      type: DataTypes.ENUM("APPROVED", "REVOKED"),
+      type: DataTypes.ENUM("APPROVED", "REVOKED", "PENDING"),
       allowNull: false,
     },
 

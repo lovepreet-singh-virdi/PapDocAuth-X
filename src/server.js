@@ -13,9 +13,10 @@ const startServer = async () => {
   await connectMongo();
   await connectPostgres();
 
-  // Sync SQL tables (dev only)
-  await sequelize.sync({ alter: true });
-  console.log("SQL tables synchronized");
+  // Schema management: We use explicit migrations instead of sequelize.sync
+  // to avoid conflicts with materialized views, partitions, and other advanced
+  // DB features. For fresh setup, run: node scripts/drop-mv-run-seed-recreate.js
+  console.log("Database connections established. Using migrations for schema management.");
 
   app.listen(env.port, () => {
     console.log(`${env.appName} v${env.appVersion} server running on port ${env.port}`);

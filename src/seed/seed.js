@@ -9,6 +9,7 @@ import { User } from "../models/sql/User.js";
 import { env } from "../config/env.js";
 import { Document } from "../models/mongo/Document.js";
 import { DocumentVersion } from "../models/mongo/DocumentVersion.js";
+import { USER_ROLES } from "../constants/enums.js";
 
 // Load models
 import "../models/sql/index.js";
@@ -20,7 +21,12 @@ import "../models/sql/index.js";
         await connectMongo();
         await connectPostgres();
 
-        await sequelize.sync({ alter: true });
+        // Note: We no longer run sequelize.sync here to avoid conflicts with
+        // materialized views. For fresh DB setup with schema + seed data, use:
+        // node scripts/drop-mv-run-seed-recreate.js
+        console.log('Connected to databases. Proceeding with seeding...');
+        console.log('(Schema must already exist. Use migrations or setup script if needed.)');
+
 
         // 1. Seed Superadmin
         const superEmail = env.superadminEmail;
@@ -32,7 +38,7 @@ import "../models/sql/index.js";
                 fullName: "Seed Superadmin",
                 email: superEmail,
                 passwordHash,
-                role: "superadmin",
+                role: USER_ROLES.SUPERADMIN,
                 orgId: null,
             });
             console.log("Superadmin created");
@@ -47,6 +53,16 @@ import "../models/sql/index.js";
             { name: "Panjab University", type: "university" },
             { name: "TechStart Inc", type: "company" },
             { name: "Healthcare Plus", type: "healthcare" },
+            { name: "St. Mary's College", type: "university" },
+            { name: "Global Enterprises Ltd", type: "company" },
+            { name: "City General Hospital", type: "healthcare" },
+            { name: "National Institute of Technology", type: "university" },
+            { name: "FinTech Solutions", type: "company" },
+            { name: "Regional Medical Center", type: "healthcare" },
+            { name: "Oxford Business School", type: "university" },
+            { name: "DataCore Systems", type: "company" },
+            { name: "Metropolitan University", type: "university" },
+            { name: "CloudNine Technologies", type: "company" },
         ];
 
         const orgRecords = [];
@@ -80,7 +96,7 @@ import "../models/sql/index.js";
                     fullName: `${org.name} Admin`,
                     email,
                     passwordHash,
-                    role: "admin",
+                    role: USER_ROLES.ADMIN,
                     orgId: org.id,
                 });
 
@@ -95,11 +111,23 @@ import "../models/sql/index.js";
             const users = [
                 { 
                     fullName: `${org.name} Verifier`, 
-                    email: `user@${org.name.replaceAll(" ", "").toLowerCase()}.com` 
+                    email: `verifier@${org.name.replaceAll(" ", "").toLowerCase()}.com` 
                 },
                 { 
                     fullName: `${org.name} Staff`, 
                     email: `staff@${org.name.replaceAll(" ", "").toLowerCase()}.com` 
+                },
+                { 
+                    fullName: `${org.name} Officer`, 
+                    email: `officer@${org.name.replaceAll(" ", "").toLowerCase()}.com` 
+                },
+                { 
+                    fullName: `${org.name} Coordinator`, 
+                    email: `coordinator@${org.name.replaceAll(" ", "").toLowerCase()}.com` 
+                },
+                { 
+                    fullName: `${org.name} Supervisor`, 
+                    email: `supervisor@${org.name.replaceAll(" ", "").toLowerCase()}.com` 
                 },
             ];
 
@@ -112,7 +140,7 @@ import "../models/sql/index.js";
                         fullName: userData.fullName,
                         email: userData.email,
                         passwordHash,
-                        role: "user",
+                        role: USER_ROLES.VERIFIER,
                         orgId: org.id,
                     });
 
@@ -123,64 +151,108 @@ import "../models/sql/index.js";
             }
         }
 
-        // 5. Seed Sample Documents for first organization
-        const firstOrg = orgRecords[0];
-        const adminUser = await User.findOne({ where: { orgId: firstOrg.id, role: 'admin' } });
+        // 5. Seed Sample Documents for all organizations
+        const documentTypes = ["transcript", "certificate", "letter", "license", "diploma", "permit", "contract", "invoice", "other"];
+        const workflowStatuses = ["APPROVED", "PENDING", "REVOKED"];
+        
+        for (const org of orgRecords) {
+            const adminUser = await User.findOne({ where: { orgId: org.id, role: USER_ROLES.ADMIN } });
+            const regularUsers = await User.findAll({ where: { orgId: org.id, role: USER_ROLES.VERIFIER } });
+            
+            if (adminUser && regularUsers.length > 0) {
+                // Create 15-25 documents per organization
+                const numDocs = Math.floor(Math.random() * 11) + 15;
+                
+                for (let i = 0; i < numDocs; i++) {
+                    const timestamp = Date.now() - (i * 86400000); // Spread across days
+                    const docId = `DOC_${timestamp}_${org.name.substring(0, 3).toUpperCase()}_${i}`;
+                    const type = documentTypes[Math.floor(Math.random() * documentTypes.length)];
+                    const status = workflowStatuses[Math.floor(Math.random() * workflowStatuses.length)];
+                    const creatorUser = Math.random() > 0.5 ? adminUser : regularUsers[Math.floor(Math.random() * regularUsers.length)];
+                    
+                    const existingDoc = await Document.findOne({ docId });
+                    if (!existingDoc) {
+                        const textHash = "0x" + Math.random().toString(16).substring(2).padEnd(64, '0');
+                        const imageHash = "0x" + Math.random().toString(16).substring(2).padEnd(64, '0');
+                        const merkleRoot = "0x" + Math.random().toString(16).substring(2).padEnd(64, '0');
+                        
+                        const doc = await Document.create({
+                            docId,
+                            type,
+                            ownerOrgId: org.id,
+                            currentVersion: 1,
+                            metadata: {
+                                fileType: "pdf",
+                                pageCount: Math.floor(Math.random() * 20) + 1,
+                                sizeInKB: Math.floor(Math.random() * 2000) + 100,
+                                mimeType: "application/pdf",
+                                title: `${type.charAt(0).toUpperCase() + type.slice(1)} Document ${i + 1}`,
+                                description: `Sample ${type} document for ${org.name}`,
+                            },
+                            versionHashChain: [merkleRoot],
+                        });
 
-        if (adminUser) {
-            const sampleDocs = [
-                {
-                    docId: `DOC-${Date.now()}-001`,
-                    type: "transcript",
-                    title: "Student Transcript - John Doe",
-                    hash: "0x" + "a".repeat(64),
-                },
-                {
-                    docId: `DOC-${Date.now()}-002`,
-                    type: "certificate",
-                    title: "Degree Certificate - Jane Smith",
-                    hash: "0x" + "b".repeat(64),
-                },
-                {
-                    docId: `DOC-${Date.now()}-003`,
-                    type: "letter",
-                    title: "Employment Letter",
-                    hash: "0x" + "c".repeat(64),
-                },
-            ];
+                        // Create initial version
+                        await DocumentVersion.create({
+                            docId,
+                            versionNumber: 1,
+                            merkleRoot,
+                            versionHash: merkleRoot,
+                            prevVersionHash: null,
+                            workflowStatus: status,
+                            createdByUserId: creatorUser.id,
+                            ownerOrgId: org.id,
+                            hashParts: {
+                                textHash,
+                                imageHash,
+                                signatureHash: Math.random() > 0.5 ? "0x" + Math.random().toString(16).substring(2).padEnd(64, '0') : null,
+                                stampHash: Math.random() > 0.7 ? "0x" + Math.random().toString(16).substring(2).padEnd(64, '0') : null,
+                            },
+                            createdAt: new Date(timestamp),
+                            updatedAt: new Date(timestamp),
+                        });
 
-            for (const docData of sampleDocs) {
-                const existingDoc = await Document.findOne({ docId: docData.docId });
-                if (!existingDoc) {
-                    const doc = await Document.create({
-                        docId: docData.docId,
-                        type: docData.type,
-                        ownerOrgId: firstOrg.id,
-                        currentVersion: 1,
-                        metadata: {
-                            fileType: "pdf",
-                            pageCount: Math.floor(Math.random() * 10) + 1,
-                            sizeInKB: Math.floor(Math.random() * 500) + 100,
-                            mimeType: "application/pdf",
-                        },
-                        versionHashChain: [docData.hash],
-                    });
+                        // 30% chance of having multiple versions
+                        if (Math.random() > 0.7) {
+                            const numVersions = Math.floor(Math.random() * 3) + 2; // 2-4 versions
+                            let prevHash = merkleRoot;
+                            
+                            for (let v = 2; v <= numVersions; v++) {
+                                const versionTimestamp = timestamp + (v * 3600000); // Hours apart
+                                const newMerkleRoot = "0x" + Math.random().toString(16).substring(2).padEnd(64, '0');
+                                
+                                await DocumentVersion.create({
+                                    docId,
+                                    versionNumber: v,
+                                    merkleRoot: newMerkleRoot,
+                                    versionHash: newMerkleRoot,
+                                    prevVersionHash: prevHash,
+                                    workflowStatus: workflowStatuses[Math.floor(Math.random() * workflowStatuses.length)],
+                                    createdByUserId: creatorUser.id,
+                                    ownerOrgId: org.id,
+                                    hashParts: {
+                                        textHash: "0x" + Math.random().toString(16).substring(2).padEnd(64, '0'),
+                                        imageHash: "0x" + Math.random().toString(16).substring(2).padEnd(64, '0'),
+                                    },
+                                    createdAt: new Date(versionTimestamp),
+                                    updatedAt: new Date(versionTimestamp),
+                                });
+                                
+                                prevHash = newMerkleRoot;
+                                
+                                // Update document
+                                await Document.findOneAndUpdate(
+                                    { docId },
+                                    { 
+                                        currentVersion: v,
+                                        $push: { versionHashChain: newMerkleRoot }
+                                    }
+                                );
+                            }
+                        }
 
-                    // Create initial version
-                    await DocumentVersion.create({
-                        docId: docData.docId,
-                        versionNumber: 1,
-                        merkleRoot: docData.hash,
-                        versionHash: docData.hash,
-                        prevVersionHash: null,
-                        workflowStatus: "APPROVED",
-                        createdByUserId: adminUser.id,
-                        ownerOrgId: firstOrg.id,
-                    });
-
-                    console.log(`Created document: ${docData.title}`);
-                } else {
-                    console.log(`Document exists: ${docData.docId}`);
+                        console.log(`Created document: ${docId} for ${org.name}`);
+                    }
                 }
             }
         }
@@ -192,6 +264,17 @@ import "../models/sql/index.js";
         console.log(`Total Users: ${totalUsers}`);
         const totalDocs = await Document.countDocuments();
         console.log(`Documents: ${totalDocs}`);
+        const totalVersions = await DocumentVersion.countDocuments();
+        console.log(`Document Versions: ${totalVersions}`);
+        
+        // Status breakdown
+        const approvedCount = await DocumentVersion.countDocuments({ workflowStatus: 'APPROVED' });
+        const pendingCount = await DocumentVersion.countDocuments({ workflowStatus: 'PENDING' });
+        const revokedCount = await DocumentVersion.countDocuments({ workflowStatus: 'REVOKED' });
+        console.log(`\nWorkflow Status Distribution:`);
+        console.log(`  Approved: ${approvedCount}`);
+        console.log(`  Pending: ${pendingCount}`);
+        console.log(`  Revoked: ${revokedCount}`);
         
         process.exit(0);
     } catch (err) {

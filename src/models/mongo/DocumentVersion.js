@@ -14,7 +14,7 @@ const DocumentVersionSchema = new mongoose.Schema(
 
     workflowStatus: {
       type: String,
-      enum: ["APPROVED", "REVOKED"],
+      enum: ["APPROVED", "PENDING", "REVOKED"],
       default: "APPROVED",
     },
 

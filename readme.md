@@ -81,437 +81,86 @@ This system architecture is inspired by production systems deployed in:
 Current document verification systems suffer from fundamental architectural and security limitations:
 
 #### 1. **Privacy Violation Through Full-Document Uploads**
-Traditional systems require users to upload complete PDFs or images to third-party servers, exposing sensitive information and creating data breach risks.
+PapDocAuthX — Backend
 
-#### 2. **Email-Based Verification Bottlenecks**
-Manual email chains between departments create processing delays (days to weeks), human errors, and phishing attack surfaces.
+This document explains how to run and work with the backend code for PapDocAuthX. The backend is an Express.js API that uses PostgreSQL (via Sequelize) for relational data and audit logs, and MongoDB (via Mongoose) for document versions and hash parts.
 
-#### 3. **Vulnerability to Sophisticated Forgery**
-Modern document editing tools enable layer-by-layer PDF manipulation, signature transplantation, and stamp/seal replication that defeat visual inspection.
+This repository is delivered as a development reference. Before any production use, review configuration, secrets, and security controls.
 
-#### 4. **Absence of Cryptographic Proof**
-Most systems rely on visual inspection or basic OCR, which cannot detect pixel-perfect forgeries or provide mathematical proof of authenticity.
+--
 
-#### 5. **No Immutable Audit Trail**
-Without cryptographic audit logs, database administrators can alter records, version history can be rewritten, and accountability cannot be proven.
+Quick links
+- Health endpoint: `GET /api/health`
+- Public landing analytics: `GET /api/analytics/public-summary` (no authentication)
+- Admin analytics: `GET /api/analytics/summary` (requires admin/superadmin)
+--
 
-### How PapDocAuthX Solves These Problems
+Quick start (developer)
 
-| Problem | PapDocAuthX Solution |
-|---------|-------------------------|
-| Full-document uploads | **Client-side hashing**: Only cryptographic fingerprints transmitted |
-| Email verification delays | **Real-time cryptographic verification**: Instant validation via API |
-| Sophisticated forgery | **Multimodal hashing**: Text + image + signature + stamp verification |
-| Visual inspection limitations | **Merkle root validation**: Cryptographic proof of integrity |
-| Database tampering | **Chained audit logs**: Tamper-evident cryptographic chains |
-| Manual verification overhead | **QR-based public verification**: Automated validation workflow |
+Prerequisites
+- Node.js 18 or later
+- PostgreSQL
+- MongoDB
+
+Install dependencies
+
+```powershell
+cd PapDocAuthX-Backend
+npm install
+```
+
+Configuration
+
+Copy `.env.example` to `.env` (if present) and set the required values. At a minimum provide connection strings for Postgres and MongoDB and a `JWT_SECRET`.
+
+Start (development)
+
+```powershell
+npm run dev
+```
+
+Smoke checks
+
+```powershell
+# Health
+curl http://localhost:4000/api/health
+
+# Public summary endpoint
+curl http://localhost:4000/api/analytics/public-summary
+```
+--
+
+Environment variables
+- `PORT` (default: 4000)
+- `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`
+- `MONGO_URI` (for MongoDB)
+- `JWT_SECRET`, `HASH_SECRET`
+
+Set these in `.env` for local development. Do not commit secrets to source control.
+--
+
+Developer scripts
+- `npm run dev` — start server with nodemon
+- `npm start` — run server with node
+- `npm run seed` — run seeder (if present)
+- `npm run migrate:verify` — check Postgres enums and role counts
+- `npm run migrate:create-access-requests` — create access_requests table/enum
+
+Use these scripts from the `PapDocAuthX-Backend` folder.
+--
+
+Notes about analytics
+- `/api/analytics/summary` is protected and returns detailed metrics for administrators.
+- `/api/analytics/public-summary` returns basic counts that are safe for the public landing page.
+--
+
+If you want more documentation (detailed API examples, Postman collection, or a migration runbook), let me know and I will add it under `docs/`.
 
 ---
 
-## ✨ Core Features
-
-### Feature 1: Multimodal Document Fingerprinting
-
-Instead of a single hash, PapDocAuthX uses **four independent cryptographic hashes**:
-
-```
-1. TEXT HASH (textHash)
-   ├─ Extracted via OCR or native PDF text streams
-   ├─ Normalized (whitespace, case handling)
-   └─ SHA-256 hash of canonical text representation
-
-2. IMAGE HASH (imageHash)
-   ├─ Full-page rasterization at standardized DPI
-   ├─ Converted to grayscale/normalized
-   └─ SHA-256 hash of pixel matrix
-
-3. SIGNATURE HASH (signatureHash)
-   ├─ Region of Interest (ROI) extraction
-   ├─ Signature bounding box isolation
-   └─ SHA-256 hash of signature pixel region
-
-4. STAMP/SEAL HASH (stampHash)
-   ├─ ROI extraction for official stamps/seals
-   ├─ Circular/rectangular seal detection
-   └─ SHA-256 hash of stamp pixel region
-```
-
-**Defense-in-Depth Principle**: An attacker must now replicate exact text, pixel-level appearance, authentic signatures, and institutional stamps simultaneously—exponentially increasing forgery complexity.
-
+License: MIT
 ---
-
-### Feature 2: Merkle Root for Integrity
-
-The four multimodal hashes are combined into a **binary Merkle tree**:
-
-```
-                    MERKLE_ROOT
-                   /            \
-            HASH(H1+H2)      HASH(H3+H4)
-             /      \          /      \
-        textHash imageHash sigHash stampHash
-```
-
-**Merkle Root Computation**:
-```javascript
-const leaf1 = sha256(textHash + imageHash)
-const leaf2 = sha256(signatureHash + stampHash)
-const merkleRoot = sha256(leaf1 + leaf2)
-```
-
-**Mathematical Properties**:
-- **Avalanche Effect**: Single bit change → completely different Merkle root
-- **Collision Resistance**: Computationally infeasible to find duplicate roots
-- **Tamper Evidence**: Any modification breaks cryptographic chain
-
----
-
-### Feature 3: Tamper-Proof Version Chain (MongoDB)
-
-Each document version computes a hash that includes:
-
-**Version Hash Formula**:
-```javascript
-versionHash = sha256(
-    prevVersionHash + 
-    merkleRoot + 
-    timestamp + 
-    adminId + 
-    orgId
-)
-```
-
-**Blockchain-Inspired Chain Structure**:
-```
-VERSION 1 (Initial Upload)
-├─ prevVersionHash: null
-├─ versionHash: abc123...
-├─ merkleRoot: def456...
-└─ status: APPROVED
-
-VERSION 2 (Correction)
-├─ prevVersionHash: abc123... (links to V1)
-├─ versionHash: ghi789...
-├─ merkleRoot: jkl012... (new content)
-└─ status: APPROVED
-
-VERSION 3 (Revoked)
-├─ prevVersionHash: ghi789... (links to V2)
-├─ status: REVOKED
-```
-
-**Immutability**: Tampering with any version requires recalculating all subsequent version hashes—computationally infeasible.
-
----
-
-### Feature 4: Enterprise Audit Chain (PostgreSQL)
-
-Every system action generates an audit record with a chained hash:
-
-**Audit Hash Formula**:
-```javascript
-auditHash = sha256(
-    userId + 
-    orgId + 
-    docId + 
-    action + 
-    timestamp + 
-    prevAuditHash + 
-    HASH_SECRET  // Server-side secret salt
-)
-```
-
-**Tamper-Evident Properties**:
-- Database administrators cannot modify past records without breaking the hash chain
-- Secret salt prevents offline hash recalculation attacks
-- PostgreSQL ACID guarantees ensure atomicity
-- Indexed hash chain enables fast integrity verification
-
----
-
-### Feature 5: Role-Based Access Control (RBAC)
-
-**Three-Tier Permission Model**:
-
-**1. SUPERADMIN (Platform Owner)**
-- Create organizations
-- Assign admin roles
-- View global analytics
-- System configuration
-
-**2. ADMIN (Organization Document Issuer)**
-- Upload document versions (org-scoped)
-- Revoke documents
-- View organization analytics
-- Generate QR codes
-
-**3. USER (Verifier)**
-- Verify documents (public API)
-- View verification history
-- Generate verification reports
-
----
-
-### Feature 6: QR-Based Public Verification
-
-Each approved document version generates a QR code encoding:
-
-```json
-{
-    "docId": "DOC_20240115_ABC123",
-    "versionHash": "9f8e7d6c5b4a3...",
-    "merkleRoot": "1a2b3c4d5e6f7...",
-    "verifyUrl": "https://verify.papdocauth.com/v/{docId}/{versionHash}"
-}
-```
-
-**Public Verification Flow**:
-1. User scans QR code
-2. Frontend extracts verification URL
-3. Public API endpoint validates document
-4. Returns verification result (no authentication required)
-
----
-
-### Feature 7: Polyglot Architecture
-
-**PostgreSQL (ACID Relational Store)**
-- User authentication & authorization
-- Organization management
-- Audit logs (immutable, chained)
-- Role relationships
-- Analytics queries
-
-**MongoDB (Flexible Document Store)**
-- Document metadata
-- Version history (rapidly growing)
-- Multimodal hash parts
-- Horizontal scaling
-
----
-
-## 🏗️ Architecture
-
-### System Architecture Diagram
-
-```mermaid
-graph TB
-    subgraph Client["Client-Side (Browser/Mobile)"]
-        A[User Uploads Document]
-        B[Extract Text via OCR]
-        C[Rasterize to Image]
-        D[Extract Signature ROI]
-        E[Extract Stamp ROI]
-        F[Compute SHA-256 Hashes]
-        G[Build Merkle Tree]
-        H[Send Hash Payload]
-    end
-
-    subgraph Backend["Backend API (Express.js + Node.js)"]
-        I[API Gateway / Router]
-        J[Authentication Middleware]
-        K[RBAC Authorization]
-        L[Document Service]
-        M[Verification Service]
-        N[Audit Service]
-    end
-
-    subgraph PostgreSQL["PostgreSQL (Relational Store)"]
-        O[Users Table]
-        P[Roles Table]
-        Q[Organizations Table]
-        R[Audit Logs Table]
-    end
-
-    subgraph MongoDB["MongoDB (Document Store)"]
-        S[Documents Collection]
-        T[DocumentVersions Collection]
-        U[HashParts Collection]
-    end
-
-    A --> B & C & D & E
-    B & C & D & E --> F
-    F --> G
-    G --> H
-    H --> I
-    I --> J
-    J --> K
-    K --> L & M & N
-
-    L --> S & T & U
-    M --> S & T
-    N --> R
-
-    O & P & Q & R -.->|Relational Queries| M
-    S & T & U -.->|Document Queries| L
-```
-
-### Request Flow: Document Upload
-
-```
-┌────────────┐
-│  Client    │
-│  (Hash)    │
-└─────┬──────┘
-      │ POST /api/documents/upload
-      │ Headers: Authorization: Bearer <JWT>
-      │ Body: { textHash, imageHash, sigHash, stampHash, metadata }
-      │
-      ▼
-┌─────────────────────────────────────────────┐
-│  Express.js Middleware Chain                │
-│  1. CORS Handler                            │
-│  2. Body Parser                             │
-│  3. JWT Authentication                      │
-│  4. RBAC Check (ADMIN role required)        │
-│  5. Rate Limiter                            │
-└─────────────┬───────────────────────────────┘
-              │
-              ▼
-┌─────────────────────────────────────────────┐
-│  Document Service                           │
-│  1. Validate hash format                    │
-│  2. Compute Merkle root                     │
-│  3. Check for existing doc                  │
-│  4. Generate docId                          │
-└─────────────┬───────────────────────────────┘
-              │
-              ▼
-┌─────────────────────────────────────────────┐
-│  MongoDB Transaction                        │
-│  1. Insert Document record                  │
-│  2. Insert DocumentVersion                  │
-│  3. Insert HashParts (4 records)            │
-│  4. Commit transaction                      │
-└─────────────┬───────────────────────────────┘
-              │
-              ▼
-┌─────────────────────────────────────────────┐
-│  Audit Service                              │
-│  1. Fetch previous audit hash               │
-│  2. Compute new audit hash                  │
-│  3. Insert audit_logs record (PostgreSQL)   │
-└─────────────┬───────────────────────────────┘
-              │
-              ▼
-┌─────────────────────────────────────────────┐
-│  Response                                   │
-│  {                                          │
-│    success: true,                           │
-│    docId: "DOC_20240115_ABC",               │
-│    versionHash: "9f8e7d...",                │
-│    merkleRoot: "1a2b3c...",                 │
-│    qrCode: "data:image/png;base64,..."      │
-│  }                                          │
-└─────────────────────────────────────────────┘
-```
-
----
-
-## 🗄️ Database Design
-
-### PostgreSQL Schema (Relational)
-
-#### 1. Users Table
-```sql
-CREATE TABLE users (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    email VARCHAR(255) UNIQUE NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
-    org_id UUID REFERENCES organizations(id) ON DELETE SET NULL,
-    full_name VARCHAR(255),
-    is_verified BOOLEAN DEFAULT false,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE INDEX idx_users_email ON users(email);
-CREATE INDEX idx_users_org ON users(org_id);
-```
-
-#### 2. Roles Table
-```sql
-CREATE TABLE roles (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name VARCHAR(50) UNIQUE NOT NULL,
-    description TEXT,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Seed roles
-INSERT INTO roles (name, description) VALUES
-    ('SUPERADMIN', 'Platform administrator with full system access'),
-    ('ADMIN', 'Organization administrator who can issue documents'),
-    ('USER', 'Standard user with verification permissions');
-```
-
-#### 3. User-Roles Junction Table
-```sql
-CREATE TABLE user_roles (
-    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    role_id UUID REFERENCES roles(id) ON DELETE CASCADE,
-    assigned_at TIMESTAMPTZ DEFAULT NOW(),
-    assigned_by UUID REFERENCES users(id),
-    PRIMARY KEY (user_id, role_id)
-);
-
-CREATE INDEX idx_user_roles_user ON user_roles(user_id);
-CREATE INDEX idx_user_roles_role ON user_roles(role_id);
-```
-
-#### 4. Organizations Table
-```sql
-CREATE TABLE organizations (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name VARCHAR(255) NOT NULL,
-    domain VARCHAR(255) UNIQUE,
-    org_type VARCHAR(50),  -- UNIVERSITY, CORPORATION, GOVERNMENT
-    is_verified BOOLEAN DEFAULT false,
-    contact_email VARCHAR(255),
-    logo_url TEXT,
-    metadata JSONB,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE INDEX idx_org_domain ON organizations(domain);
-CREATE INDEX idx_org_type ON organizations(org_type);
-CREATE INDEX idx_org_verified ON organizations(is_verified);
-```
-
-#### 5. Audit Logs Table (Tamper-Evident)
-```sql
-CREATE TABLE audit_logs (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID REFERENCES users(id),
-    org_id UUID REFERENCES organizations(id),
-    doc_id VARCHAR(255),  -- References MongoDB document
-    action VARCHAR(50) NOT NULL,  -- UPLOAD, VERIFY, REVOKE, LOGIN, etc.
-    timestamp TIMESTAMPTZ DEFAULT NOW(),
-    ip_address INET,
-    user_agent TEXT,
-    prev_audit_hash VARCHAR(64),
-    audit_hash VARCHAR(64) UNIQUE NOT NULL,
-    metadata JSONB
-);
-
-CREATE INDEX idx_audit_user ON audit_logs(user_id);
-CREATE INDEX idx_audit_org ON audit_logs(org_id);
-CREATE INDEX idx_audit_doc ON audit_logs(doc_id);
-CREATE INDEX idx_audit_action ON audit_logs(action);
-CREATE INDEX idx_audit_timestamp ON audit_logs(timestamp DESC);
-CREATE UNIQUE INDEX idx_audit_hash ON audit_logs(audit_hash);
-```
-
----
-
-### MongoDB Schema (Document Store)
-
-#### 1. Documents Collection
-```javascript
-{
-    _id: ObjectId("..."),
-    docId: "DOC_20240115_ABC123",  // Human-readable unique ID
+MIT License
     orgId: "uuid-of-organization",  // References PostgreSQL orgs
     docType: "DEGREE_CERTIFICATE",  // TRANSCRIPT, OFFER_LETTER, etc.
     metadata: {
@@ -1471,6 +1120,24 @@ npm run migrate:postgres
 psql -U postgres -d papdocauth -f database/postgres/schema.sql
 ```
 
+### Quick Commands
+
+Use these convenient npm scripts during local development and migration work:
+
+- `npm run dev`: Start the server with `nodemon` (development).
+- `npm start`: Run the server (production-style invocation).
+- `npm run seed`: Run database seed script (`src/seed/seed.js`).
+- `npm run migrate:verify`: Inspect Postgres enums and role counts (`src/migrations/check-enums-and-roles.js`).
+- `npm run migrate:add-verifier`: Add the `verifier` enum / helper migration.
+- `npm run migrate:remove-user`: Safely remove the deprecated `user` enum value (if applicable).
+- `npm run migrate:create-access-requests`: Create/ensure the `access_requests` table and enum.
+- `npm run migrate:all`: Run verify + add-verifier + remove-user + create-access-requests in sequence.
+
+Notes:
+- Run `npm run migrate:verify` first to inspect current enum values and row counts before making changes.
+- Back up your database before running any destructive migrations.
+
+
 #### MongoDB Setup
 
 ```bash
@@ -1587,13 +1254,48 @@ node -e "console.log(require('crypto').randomBytes(16).toString('hex'))"
 
 ---
 
-## 🌱 Database Seeding
+## 🌱 Database Setup & Seeding
 
-### Run Seed Script
+### Fresh Database Setup (Recommended for New Installations)
+
+For a complete fresh setup that creates schema, materialized views, and seed data in one command:
 
 ```bash
-npm run seed
+node scripts/setup-fresh-db.js
 ```
+
+This script will:
+1. Connect to both Postgres and MongoDB
+2. Create base SQL tables using Sequelize models
+3. Run all migration files in `migrations/` (in order)
+4. Execute the seeder to populate initial data
+
+### Database Management Scripts
+
+**Drop views, reseed data, and recreate views:**
+```bash
+node scripts/drop-mv-run-seed-recreate.js
+```
+
+**List existing materialized views:**
+```bash
+node scripts/list-mviews.js
+```
+
+**Run seeder only (schema must already exist):**
+```bash
+npm run seed
+# or
+node src/seed/seed.js
+```
+
+### Important Notes on Schema Management
+
+⚠️ **Migration Philosophy**: This project uses **explicit migrations** instead of `sequelize.sync({ alter: true })` to avoid conflicts with advanced PostgreSQL features (materialized views, partitions, rules).
+
+- Schema changes are **not** automatically applied on server startup
+- Use migration scripts for schema updates
+- Materialized views must be dropped before ALTERing dependent columns
 
 ### What Gets Seeded
 

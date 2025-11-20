@@ -27,7 +27,7 @@ AuditLog.init(
     },
 
     action: {
-      type: DataTypes.ENUM("UPLOAD", "APPROVE", "REVOKE", "CRYPTO_CHECK"),
+      type: DataTypes.ENUM("UPLOAD", "APPROVE", "REVOKE", "CRYPTO_CHECK", "VERIFIED"),
       allowNull: false,
     },
 
