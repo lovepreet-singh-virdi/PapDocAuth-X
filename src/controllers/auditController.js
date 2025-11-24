@@ -23,8 +23,10 @@ export const auditController = {
 
       const limit = parseInt(req.query.limit) || 100;
       const offset = parseInt(req.query.offset) || 0;
+      const search = req.query.search || '';
+      const action = req.query.action || '';
 
-      const logs = await getAllAuditLogs({ limit, offset });
+      const { logs, total } = await getAllAuditLogs({ limit, offset, search, action });
 
       // Map logs to enriched format (data already included via Sequelize associations)
       const enrichedLogs = logs.map((log) => ({
@@ -45,6 +47,7 @@ export const auditController = {
       res.json({
         success: true,
         logs: enrichedLogs,
+        total,
         pagination: { limit, offset }
       });
     } catch (err) {
@@ -70,8 +73,10 @@ export const auditController = {
 
       const limit = parseInt(req.query.limit) || 100;
       const offset = parseInt(req.query.offset) || 0;
+      const search = req.query.search || '';
+      const action = req.query.action || '';
 
-      const logs = await getOrgAuditLogs({ orgId: requestedOrgId, limit, offset });
+      const { logs, total } = await getOrgAuditLogs({ orgId: requestedOrgId, limit, offset, search, action });
 
       // Map logs to enriched format (data already included via Sequelize associations)
       const enrichedLogs = logs.map((log) => ({
@@ -90,6 +95,7 @@ export const auditController = {
       res.json({
         success: true,
         logs: enrichedLogs,
+        total,
         pagination: { limit, offset }
       });
     } catch (err) {

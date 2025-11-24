@@ -43,15 +43,17 @@ Unlike traditional document verification systems that require full file uploads 
 
 ### What Makes PapDocAuthX Unique?
 
+
 PapDocAuthX combines cutting-edge cryptographic techniques with enterprise-grade architecture to deliver:
 
 - **Multimodal Hashing**: Four independent cryptographic hashes (text, raster image, signature ROI, stamp ROI) provide defense-in-depth against sophisticated document forgery
-- **Merkle Tree Integrity**: Binary Merkle tree roots ensure that even single-pixel modifications are cryptographically detectable
-- **Tamper-Proof Version Chains**: Blockchain-inspired version linking in MongoDB creates an immutable document evolution history
+- **Version Chain Integrity**: Blockchain-inspired version linking in MongoDB creates an immutable document evolution history
 - **ACID-Guaranteed Audit Logs**: PostgreSQL-backed audit chains prevent tampering even by database administrators
 - **Role-Based Access Control (RBAC)**: Granular permission system ensures only authorized personnel can issue or revoke documents
-- **QR-Based Public Verification**: Anyone can verify document authenticity via QR codes without system access
 - **Polyglot Persistence**: Hybrid SQL + NoSQL architecture optimizes for both relational integrity and horizontal scalability
+
+**Deprecated/Removed:**
+- QR code-based public verification, tamper score, Merkle proof, and anomaly signal features are not present in the current version
 
 ### Enterprise Security Guarantees
 
@@ -65,12 +67,13 @@ PapDocAuthX provides four fundamental security guarantees:
 ### Real-World Applications
 
 This system architecture is inspired by production systems deployed in:
+- Government Digital Identity Systems (e.g., DigiLocker)
+- University Transcript Verification (e.g., National Student Clearinghouse)
+- Embassy Document Authentication
+- HR Onboarding & Background Verification
+- Legal Document Notarization
 
-- **Government Digital Identity Systems** (e.g., DigiLocker)
-- **University Transcript Verification** (e.g., National Student Clearinghouse)
-- **Embassy Document Authentication**
-- **HR Onboarding & Background Verification**
-- **Legal Document Notarization**
+**Note:** QR code, tamper score, Merkle proof, and anomaly signal features are not present in the current version. Verification is based on hash and version chain checks only.
 
 ---
 
@@ -95,29 +98,67 @@ Quick links
 - Admin analytics: `GET /api/analytics/summary` (requires admin/superadmin)
 --
 
-Quick start (developer)
 
-Prerequisites
+## ⚡ Quick Start (Developer Onboarding)
+
+### 1. Prerequisites
 - Node.js 18 or later
-- PostgreSQL
-- MongoDB
+- PostgreSQL (v15+ recommended)
+- MongoDB (v6+ recommended)
 
-Install dependencies
-
+### 2. Install Dependencies
 ```powershell
 cd PapDocAuthX-Backend
 npm install
 ```
 
-Configuration
+### 3. Environment Configuration
+Copy `.env.example` to `.env` and fill in required values:
+```powershell
+cp .env.example .env
+# (or manually copy on Windows)
+```
+Set at least:
+- PostgreSQL connection details
+- MongoDB URI
+- JWT_SECRET (32+ chars)
 
-Copy `.env.example` to `.env` (if present) and set the required values. At a minimum provide connection strings for Postgres and MongoDB and a `JWT_SECRET`.
+### 4. Database Migrations (Automated)
+Run all SQL migrations in order:
+```powershell
+npm run migrate:all
+# Or run individual migration scripts as needed (see package.json)
+```
+If you see enum errors (e.g., missing 'VERIFIED'), run:
+```powershell
+npm run migrate:add-verified-enum
+```
 
-Start (development)
+### 5. Seed Initial Data
+```powershell
+npm run seed
+```
 
+### 6. Start the Development Server
 ```powershell
 npm run dev
 ```
+
+---
+**Tip:** For a full reset (drop/recreate/seed), use:
+```powershell
+node scripts/setup-fresh-db.js
+```
+---
+
+### 7. Health Check
+```powershell
+curl http://localhost:4000/api/health
+```
+
+---
+**All migration and setup scripts are now automated and documented in package.json.**
+---
 
 Smoke checks
 

@@ -17,5 +17,6 @@ router.get("/superadmin-status", authController.checkSuperadminStatus);
 
 // GET /api/auth/users (superadmin only - get all users)
 router.get("/users", authMiddleware, checkRole(['superadmin']), validatePagination, authController.getAllUsers);
+router.get("/admin-count", authController.getAdminCount);
 
 export default router;

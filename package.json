@@ -19,11 +19,8 @@
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "migrate:verify": "node src/migrations/check-enums-and-roles.js",
-    "migrate:add-verifier": "node src/migrations/migrate-user-to-verifier.js",
-    "migrate:remove-user": "node src/migrations/remove-user-enum.js",
-    "migrate:create-access-requests": "node src/migrations/create-access-requests.js",
-    "migrate:all": "node src/migrations/check-enums-and-roles.js && node src/migrations/migrate-user-to-verifier.js && node src/migrations/remove-user-enum.js && node src/migrations/create-access-requests.js"
+    "migrate:add-verified-enum": "node scripts/run-add-verified-enum.js",
+    "migrate:all-sql": "node scripts/run-all-sql-migrations.cjs"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

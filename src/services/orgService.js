@@ -7,9 +7,34 @@ import { sequelize } from "../config/dbPostgres.js";
  * Get all organizations.
  */
 export async function getAllOrganizations() {
-  return await Organization.findAll({
+  // Get all orgs
+  const orgs = await Organization.findAll({
     order: [['createdAt', 'DESC']],
+    raw: true,
   });
+  // For each org, count admins
+  const orgIds = orgs.map(o => o.id);
+  console.log('[getAllOrganizations] orgIds:', orgIds);
+  const adminCounts = await User.findAll({
+    attributes: ['orgId', [sequelize.fn('COUNT', sequelize.col('id')), 'adminCount']],
+    where: {
+      orgId: orgIds,
+      role: 'admin',
+    },
+    group: ['orgId'],
+    raw: true,
+  });
+  console.log('[getAllOrganizations] adminCounts:', adminCounts);
+  const adminCountMap = {};
+  adminCounts.forEach(row => {
+    adminCountMap[row.orgId] = parseInt(row.adminCount, 10);
+  });
+  console.log('[getAllOrganizations] adminCountMap:', adminCountMap);
+  // Attach adminCount to each org
+  return orgs.map(org => ({
+    ...org,
+    adminCount: adminCountMap[org.id] || 0,
+  }));
 }
 
 /**

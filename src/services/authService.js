@@ -86,17 +86,35 @@ const user = await User.findOne({
  * Get all users (superadmin only)
  * Excludes superadmin users from the list for security
  */
-export async function getAllUsers() {
-  return await User.findAll({
+/**
+ * Get all users (superadmin only) with pagination and search
+ * Excludes superadmin users from the list for security
+ */
+export async function getAllUsers({ limit = 50, offset = 0, search = '', role = '', orgId = '' } = {}) {
+  const where = {
+    role: { [Op.ne]: 'superadmin' }
+  };
+  if (role && role !== 'all') where.role = role;
+  if (orgId && orgId !== 'all') where.orgId = orgId;
+  if (search && search.trim() !== '') {
+    where[Op.or] = [
+      { fullName: { [Op.iLike]: `%${search.trim()}%` } },
+      { email: { [Op.iLike]: `%${search.trim()}%` } }
+    ];
+  }
+  console.log('[getAllUsers service] Sequelize where:', where);
+  const { rows: users, count: total } = await User.findAndCountAll({
     attributes: ['id', 'fullName', 'email', 'role', 'orgId', 'createdAt'],
-    where: {
-      role: { [Op.ne]: 'superadmin' } // Exclude superadmins
-    },
+    where,
     include: [{
       model: Organization,
       as: 'organization',
       attributes: ['id', 'name', 'slug']
     }],
     order: [['createdAt', 'DESC']],
+    limit,
+    offset,
   });
+  console.log(`[getAllUsers service] Found ${users.length} users, total: ${total}`);
+  return { users, total };
 }

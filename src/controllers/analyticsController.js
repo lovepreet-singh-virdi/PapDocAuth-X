@@ -20,26 +20,28 @@ export const analyticsController = {
 
   summary: async (req, res, next) => {
     try {
-      const { role, orgId } = req.user;
-
+      const { role, orgId } = req.user || {};
+      if (!role) {
+        console.error('[analyticsController.summary] No role in req.user:', req.user);
+        return res.status(401).json({ success: false, error: 'Unauthorized: No user role found.' });
+      }
       // Superadmin gets global analytics
       if (role === USER_ROLES.SUPERADMIN) {
         const result = await analyticsService.summary();
         return res.json({ success: true, data: result });
       }
-
       // Admin gets org-scoped analytics
       if (role === USER_ROLES.ADMIN) {
         const result = await analyticsService.orgSummary(orgId);
         return res.json({ success: true, data: result });
       }
-
       // Other roles not authorized
       return res.status(403).json({
         success: false,
         error: "Only admin and superadmin can access analytics"
       });
     } catch (err) {
+      console.error('[analyticsController.summary] Error:', err);
       next(err);
     }
   }

@@ -13,7 +13,7 @@ export const orgController = {
       const orgs = await getAllOrganizations();
       res.json({
         success: true,
-        organizations: orgs,
+        organizations: orgs, // now includes adminCount per org
       });
     } catch (err) {
       next(err);

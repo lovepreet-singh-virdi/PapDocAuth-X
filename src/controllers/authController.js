@@ -1,6 +1,16 @@
+
 import { registerSuperadmin, login, checkSuperadminExists, getAllUsers } from "../services/authService.js";
 
 export const authController = {
+  getAdminCount: async (req, res, next) => {
+    try {
+      const { User } = await import('../models/sql/User.js');
+      const count = await User.count({ where: { role: 'admin' } });
+      res.json({ success: true, count });
+    } catch (err) {
+      next(err);
+    }
+  },
   registerSuperadmin: async (req, res, next) => {
     try {
       const { fullName, email, password } = req.body;
@@ -60,10 +70,22 @@ export const authController = {
 
   getAllUsers: async (req, res, next) => {
     try {
-      const users = await getAllUsers();
+      const { limit = 50, offset = 0, search = '', role = '', orgId = '' } = req.query;
+      const parsedLimit = Math.max(1, Math.min(parseInt(limit, 10) || 50, 100));
+      const parsedOffset = Math.max(0, parseInt(offset, 10) || 0);
+      console.log('[getAllUsers] Query:', { limit: parsedLimit, offset: parsedOffset, search, role, orgId });
+      const { users, total } = await getAllUsers({
+        limit: parsedLimit,
+        offset: parsedOffset,
+        search,
+        role,
+        orgId,
+      });
+      console.log(`[getAllUsers] Returned users:`, users.map(u => ({ id: u.id, email: u.email, role: u.role })));
       res.json({
         success: true,
         users,
+        total,
       });
     } catch (err) {
       next(err);
