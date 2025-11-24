@@ -1,5 +1,4 @@
 -- Database triggers for automatic operations
--- Implemented based on ADT course material
 
 -- Trigger to auto-update timestamp
 CREATE OR REPLACE FUNCTION update_timestamp()
