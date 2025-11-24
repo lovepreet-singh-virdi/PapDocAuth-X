@@ -1,63 +1,45 @@
-# PapDocAuthX
 
-## Enterprise-Grade Polyglot Document Authentication Backend
+# PapDocAuthX Backend
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Node.js](https://img.shields.io/badge/Node.js-18.x-green.svg)](https://nodejs.org/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15.x-blue.svg)](https://www.postgresql.org/)
-[![MongoDB](https://img.shields.io/badge/MongoDB-6.x-green.svg)](https://www.mongodb.com/)
+## Overview
+Backend for secure document authentication and verification. No document files are stored—only cryptographic fingerprints.
 
-> ⚠️ **Security Notice**: This is a reference implementation for educational purposes. Before deploying to production, conduct a thorough security audit and customize security configurations.
+## Features
+- User roles: superadmin, admin, verifier
+- Document versioning and audit logs
+- Organization and user management
+- Analytics API (global/org)
+- Revocation and verification endpoints
 
----
+## Quick Start
+1. Clone the repo and install dependencies:
+    ```sh
+    npm install
+    ```
+2. Set up `.env` with MongoDB and PostgreSQL connection details (see `.env.example`).
+3. Run database migrations and seed data:
+    ```sh
+    npm run seed
+    ```
+4. Start the server:
+    ```sh
+    npm run dev
+    ```
 
-## 📋 Table of Contents
+## Main Endpoints
+- `POST /api/auth/login` — User login
+- `GET /api/auth/users` — List users (superadmin only)
+- `GET /api/orgs` — List organizations
+- `GET /api/documents` — List documents
+- `GET /api/analytics/summary` — Analytics (admin/superadmin)
+- `GET /api/auth/admin-count` — Total admin count
 
-- [Project Overview](#project-overview)
-- [Problem Statement](#problem-statement)
-- [Core Features](#core-features)
-- [Architecture](#architecture)
-- [Database Design](#database-design)
-- [API Reference](#api-reference)
-- [Cryptographic Verification Logic](#cryptographic-verification-logic)
-- [Client-Side Integration](#client-side-integration)
-- [Installation & Setup](#installation--setup)
-- [Environment Configuration](#environment-configuration)
-- [Database Seeding](#database-seeding)
-- [Deployment Guide](#deployment-guide)
-- [Security Best Practices](#security-best-practices)
-- [Contributing](#contributing)
-- [License](#license)
+## Notes
+- QR code, tamper score, Merkle proof, and anomaly signal features are removed.
+- For production, review security and environment settings.
 
----
-
-## 🎯 Project Overview
-
-**PapDocAuthX** is a next-generation, production-ready backend system engineered to address a critical challenge facing universities, corporations, government agencies, and HR departments worldwide:
-
-> **How can institutions verify the authenticity of sensitive documents—degrees, transcripts, offer letters, certificates, and legal documents—without exposing the actual documents or relying on insecure file-sharing mechanisms?**
-
-### The Zero-Document-Upload Paradigm
-
-Unlike traditional document verification systems that require full file uploads to centralized servers, PapDocAuthX implements a revolutionary **zero-document-upload verification model**. The server never stores PDFs, images, signatures, or raw text content. Instead, it stores only **multimodal cryptographic fingerprints** that are computed client-side before transmission.
-
-### What Makes PapDocAuthX Unique?
-
-
-PapDocAuthX combines cutting-edge cryptographic techniques with enterprise-grade architecture to deliver:
-
-- **Multimodal Hashing**: Four independent cryptographic hashes (text, raster image, signature ROI, stamp ROI) provide defense-in-depth against sophisticated document forgery
-- **Version Chain Integrity**: Blockchain-inspired version linking in MongoDB creates an immutable document evolution history
-- **ACID-Guaranteed Audit Logs**: PostgreSQL-backed audit chains prevent tampering even by database administrators
-- **Role-Based Access Control (RBAC)**: Granular permission system ensures only authorized personnel can issue or revoke documents
-- **Polyglot Persistence**: Hybrid SQL + NoSQL architecture optimizes for both relational integrity and horizontal scalability
-
-**Deprecated/Removed:**
-- QR code-based public verification, tamper score, Merkle proof, and anomaly signal features are not present in the current version
-
-### Enterprise Security Guarantees
-
-PapDocAuthX provides four fundamental security guarantees:
+## License
+MIT
 
 1. **Strong Authenticity**: Every document version is cryptographically linked to previous versions using immutable version hashes, creating a verifiable chain of custody
 2. **Strong Integrity**: Cryptographic audit chains prevent unauthorized modifications, even by privileged database administrators
