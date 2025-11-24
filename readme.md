@@ -43,15 +43,17 @@ Unlike traditional document verification systems that require full file uploads 
 
 ### What Makes PapDocAuthX Unique?
 
+
 PapDocAuthX combines cutting-edge cryptographic techniques with enterprise-grade architecture to deliver:
 
 - **Multimodal Hashing**: Four independent cryptographic hashes (text, raster image, signature ROI, stamp ROI) provide defense-in-depth against sophisticated document forgery
-- **Merkle Tree Integrity**: Binary Merkle tree roots ensure that even single-pixel modifications are cryptographically detectable
-- **Tamper-Proof Version Chains**: Blockchain-inspired version linking in MongoDB creates an immutable document evolution history
+- **Version Chain Integrity**: Blockchain-inspired version linking in MongoDB creates an immutable document evolution history
 - **ACID-Guaranteed Audit Logs**: PostgreSQL-backed audit chains prevent tampering even by database administrators
 - **Role-Based Access Control (RBAC)**: Granular permission system ensures only authorized personnel can issue or revoke documents
-- **QR-Based Public Verification**: Anyone can verify document authenticity via QR codes without system access
 - **Polyglot Persistence**: Hybrid SQL + NoSQL architecture optimizes for both relational integrity and horizontal scalability
+
+**Deprecated/Removed:**
+- QR code-based public verification, tamper score, Merkle proof, and anomaly signal features are not present in the current version
 
 ### Enterprise Security Guarantees
 
@@ -65,12 +67,13 @@ PapDocAuthX provides four fundamental security guarantees:
 ### Real-World Applications
 
 This system architecture is inspired by production systems deployed in:
+- Government Digital Identity Systems (e.g., DigiLocker)
+- University Transcript Verification (e.g., National Student Clearinghouse)
+- Embassy Document Authentication
+- HR Onboarding & Background Verification
+- Legal Document Notarization
 
-- **Government Digital Identity Systems** (e.g., DigiLocker)
-- **University Transcript Verification** (e.g., National Student Clearinghouse)
-- **Embassy Document Authentication**
-- **HR Onboarding & Background Verification**
-- **Legal Document Notarization**
+**Note:** QR code, tamper score, Merkle proof, and anomaly signal features are not present in the current version. Verification is based on hash and version chain checks only.
 
 ---
 

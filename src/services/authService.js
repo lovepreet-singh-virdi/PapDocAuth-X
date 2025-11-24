@@ -102,6 +102,7 @@ export async function getAllUsers({ limit = 50, offset = 0, search = '', role = 
       { email: { [Op.iLike]: `%${search.trim()}%` } }
     ];
   }
+  console.log('[getAllUsers service] Sequelize where:', where);
   const { rows: users, count: total } = await User.findAndCountAll({
     attributes: ['id', 'fullName', 'email', 'role', 'orgId', 'createdAt'],
     where,
@@ -114,5 +115,6 @@ export async function getAllUsers({ limit = 50, offset = 0, search = '', role = 
     limit,
     offset,
   });
+  console.log(`[getAllUsers service] Found ${users.length} users, total: ${total}`);
   return { users, total };
 }
