@@ -1,17 +1,10 @@
-import crypto from "crypto";
+import { computeMerkleRoot } from "./hashingService.js";
 import { Document } from "../models/mongo/Document.js";
 import { DocumentVersion } from "../models/mongo/DocumentVersion.js";
 import { addAuditEntry } from "./auditService.js";
 import { WORKFLOW_STATUS } from "../constants/enums.js";
 
-function computeMerkleRoot({ textHash, imageHash, signatureHash, stampHash }) {
-  const leaves = [textHash, imageHash, signatureHash, stampHash]
-    .map(h => crypto.createHash("sha256").update(h).digest("hex"))
-    .sort();
 
-  const concatenated = leaves.join("");
-  return crypto.createHash("sha256").update(concatenated).digest("hex");
-}
 
 export async function verifyDocument({
   userId,
@@ -19,6 +12,7 @@ export async function verifyDocument({
   docId,
   hashes
 }) {
+
   const { textHash, imageHash, signatureHash, stampHash } = hashes;
 
   // Step 1: Recompute Merkle root from input
@@ -29,6 +23,12 @@ export async function verifyDocument({
     stampHash
   });
 
+  // Debug: Log provided hashes and computed Merkle root
+  console.log('--- Verification Debug ---');
+  console.log('Provided docId:', docId);
+  console.log('Provided hashes:', { textHash, imageHash, signatureHash, stampHash });
+  console.log('Computed client Merkle root:', clientMerkleRoot);
+
   // Step 2: Load root document
   const doc = await Document.findOne({ docId });
   if (!doc) {
@@ -38,11 +38,31 @@ export async function verifyDocument({
     };
   }
 
+
   // Step 3: Load latest APPROVED version
   const latest = await DocumentVersion.findOne({
     docId,
     workflowStatus: WORKFLOW_STATUS.APPROVED
   }).sort({ versionNumber: -1 });
+
+  // Also fetch stored hashes for this version
+  let storedHashes = null;
+  if (latest) {
+    const { versionNumber } = latest;
+    const HashPart = (await import('../models/mongo/HashPart.js')).HashPart;
+    storedHashes = await HashPart.findOne({ docId, versionNumber }).lean();
+    if (storedHashes) {
+      console.log('Stored hashes for latest version:', {
+        textHash: storedHashes.textHash,
+        imageHash: storedHashes.imageHash,
+        signatureHash: storedHashes.signatureHash,
+        stampHash: storedHashes.stampHash
+      });
+    } else {
+      console.log('No stored hashes found for latest version:', versionNumber);
+    }
+    console.log('Stored Merkle root:', latest.merkleRoot);
+  }
 
   if (!latest) {
     return {
@@ -71,9 +91,11 @@ export async function verifyDocument({
   const isRevoked = Boolean(revokedVersion);
 
   // Step 6: Log audit
+  // Use default orgId 0 for superadmin (orgId null/undefined)
+  const auditOrgId = orgId == null ? 0 : orgId;
   await addAuditEntry({
     userId,
-    orgId,
+    orgId: auditOrgId,
     docId,
     versionNumber,
     action: "VERIFIED",

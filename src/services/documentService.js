@@ -9,20 +9,8 @@ import { addAuditEntry } from "./auditService.js";
  * Compute Merkle Root from the 4 multimodal hashes
  * Filters out empty hashes before computing
  */
-function computeMerkleRoot({ textHash, imageHash, signatureHash, stampHash }) {
-    const leaves = [textHash, imageHash, signatureHash, stampHash]
-        .filter(h => h && h.trim() !== "") // Filter out empty hashes
-        .map(h => crypto.createHash("sha256").update(h).digest("hex"))
-        .sort(); // Ensure deterministic ordering
-
-    // If no valid hashes, use the first non-empty one or empty string
-    if (leaves.length === 0) {
-        return crypto.createHash("sha256").update("").digest("hex");
-    }
-
-    const concat = leaves.join("");
-    return crypto.createHash("sha256").update(concat).digest("hex");
-}
+// Use shared Merkle root logic from hashingService.js
+import { computeMerkleRoot } from "./hashingService.js";
 
 /**
  * Compute version hash = SHA256(previousVersionHash + merkleRoot)
@@ -274,9 +262,11 @@ async function performDocumentUpload({ orgId, userId, docId, type, metadata, has
 
     // 8. Audit Log (SQL) - always outside MongoDB transaction
     try {
+        // Use default orgId 0 for superadmin (orgId null/undefined)
+        const auditOrgId = orgId == null ? 0 : orgId;
         await addAuditEntry({
             userId,
-            orgId,
+            orgId: auditOrgId,
             docId,
             versionNumber,
             action: "UPLOAD",
