@@ -1,7 +1,23 @@
+
 import { analyticsService } from "../services/analyticsService.js";
 import { USER_ROLES } from "../constants/enums.js";
 
 export const analyticsController = {
+  userSummary: async (req, res, next) => {
+    try {
+      const { id, userId } = req.user;
+      // Support both id and userId for compatibility
+      const actualUserId = id || userId;
+      if (!actualUserId) {
+        return res.status(400).json({ success: false, error: 'User ID missing in request' });
+      }
+      const result = await analyticsService.userSummary(actualUserId);
+      return res.json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  },
+
   summary: async (req, res, next) => {
     try {
       const { role, orgId } = req.user;
