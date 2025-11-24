@@ -91,8 +91,11 @@ export async function verifyDocument({
   const isRevoked = Boolean(revokedVersion);
 
   // Step 6: Log audit
-  // Use default orgId 0 for superadmin (orgId null/undefined)
-  const auditOrgId = orgId == null ? 0 : orgId;
+  // Use document.ownerOrgId for superadmin (orgId null/undefined)
+  let auditOrgId = orgId;
+  if (auditOrgId == null) {
+    auditOrgId = doc.ownerOrgId;
+  }
   await addAuditEntry({
     userId,
     orgId: auditOrgId,
