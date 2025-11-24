@@ -58,43 +58,91 @@ export async function addAuditEntry({
 /**
  * Get all audit logs (superadmin only)
  */
-export async function getAllAuditLogs({ limit = 100, offset = 0 }) {
-  return await AuditLog.findAll({
+export async function getAllAuditLogs({ limit = 100, offset = 0, search = '', action = '' }) {
+  // Build where clause for action
+  const where = {};
+  if (action && action !== 'all') where.action = action;
+
+  // Build search filter for docId, userName, userEmail, orgName
+  let userWhere = {};
+  let orgWhere = {};
+  if (search && search.trim() !== '') {
+    const regex = { [Symbol.for('iLike')]: `%${search.trim()}%` };
+    userWhere = {
+      [Symbol.for('or')]: [
+        { fullName: regex },
+        { email: regex }
+      ]
+    };
+    orgWhere = { name: regex };
+    where[Symbol.for('or')] = [
+      { docId: regex },
+    ];
+  }
+
+  // Count total
+  const total = await AuditLog.count({
+    where,
     include: [
-      {
-        model: User,
-        as: 'user',
-        attributes: ['id', 'fullName', 'email', 'role']
-      },
-      {
-        model: Organization,
-        as: 'organization',
-        attributes: ['id', 'name', 'slug']
-      }
+      { model: User, as: 'user', where: userWhere, required: false },
+      { model: Organization, as: 'organization', where: orgWhere, required: false }
+    ]
+  });
+
+  // Fetch paginated logs
+  const logs = await AuditLog.findAll({
+    where,
+    include: [
+      { model: User, as: 'user', attributes: ['id', 'fullName', 'email', 'role'], where: userWhere, required: false },
+      { model: Organization, as: 'organization', attributes: ['id', 'name', 'slug'], where: orgWhere, required: false }
     ],
     order: [['timestamp', 'DESC']],
     limit,
     offset
   });
+  return { logs, total };
 }
 
 /**
  * Get audit logs for specific organization (admin can view their org)
  */
-export async function getOrgAuditLogs({ orgId, limit = 100, offset = 0 }) {
-  return await AuditLog.findAll({
-    where: { orgId },
+export async function getOrgAuditLogs({ orgId, limit = 100, offset = 0, search = '', action = '' }) {
+  const where = { orgId };
+  if (action && action !== 'all') where.action = action;
+
+  let userWhere = {};
+  if (search && search.trim() !== '') {
+    const regex = { [Symbol.for('iLike')]: `%${search.trim()}%` };
+    userWhere = {
+      [Symbol.for('or')]: [
+        { fullName: regex },
+        { email: regex }
+      ]
+    };
+    where[Symbol.for('or')] = [
+      { docId: regex },
+    ];
+  }
+
+  // Count total
+  const total = await AuditLog.count({
+    where,
     include: [
-      {
-        model: User,
-        as: 'user',
-        attributes: ['id', 'fullName', 'email', 'role']
-      }
+      { model: User, as: 'user', where: userWhere, required: false }
+    ]
+  });
+
+  // Fetch paginated logs
+  const logs = await AuditLog.findAll({
+    where,
+    include: [
+      { model: User, as: 'user', attributes: ['id', 'fullName', 'email', 'role'], where: userWhere, required: false }
     ],
     order: [['timestamp', 'DESC']],
     limit,
     offset
   });
+  return { logs, total };
 }
 
 /**

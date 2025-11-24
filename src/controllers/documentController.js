@@ -10,12 +10,17 @@ export const documentController = {
     getAllDocuments: async (req, res, next) => {
         try {
             const { orgId, role } = req.user;
-            
-            const documents = await getAllDocuments({ orgId, role });
-            
+            const { limit, offset, page, search } = req.query;
+            // Support both offset/limit and page/limit
+            let useOffset = offset;
+            if (!useOffset && page && limit) {
+                useOffset = (parseInt(page) - 1) * parseInt(limit);
+            }
+            const { items, total } = await getAllDocuments({ orgId, role, limit, offset: useOffset, search });
             res.json({
                 success: true,
-                documents
+                documents: items,
+                total
             });
         } catch (err) {
             next(err);

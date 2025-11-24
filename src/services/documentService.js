@@ -24,13 +24,30 @@ function computeVersionHash(prevHash, merkleRoot) {
  * Get all documents for an organization
  * Superadmin can see all, Admin/User see their org only
  */
-export async function getAllDocuments({ orgId, role }) {
-    const filter = role === 'superadmin' ? {} : { ownerOrgId: orgId };
-    
+
+export async function getAllDocuments({ orgId, role, limit, offset, search }) {
+    let filter = role === 'superadmin' ? {} : { ownerOrgId: orgId };
+    // Add search support (by docId or type, case-insensitive)
+    if (search && search.trim() !== '') {
+        const regex = new RegExp(search.trim(), 'i');
+        filter = {
+            ...filter,
+            $or: [
+                { docId: regex },
+                { type: regex }
+            ]
+        };
+    }
+    // Pagination
+    const queryLimit = typeof limit !== 'undefined' ? parseInt(limit) : 10;
+    const queryOffset = typeof offset !== 'undefined' ? parseInt(offset) : 0;
+    const total = await Document.countDocuments(filter);
     const documents = await Document.find(filter)
         .sort({ createdAt: -1 })
+        .skip(queryOffset)
+        .limit(queryLimit)
         .lean();
-    
+
     // Get latest version info for each document
     const enrichedDocs = await Promise.all(
         documents.map(async (doc) => {
@@ -38,7 +55,6 @@ export async function getAllDocuments({ orgId, role }) {
                 docId: doc.docId,
                 versionNumber: doc.currentVersion
             }).lean();
-            
             return {
                 ...doc,
                 latestVersionStatus: latestVersion?.workflowStatus || 'UNKNOWN',
@@ -47,8 +63,7 @@ export async function getAllDocuments({ orgId, role }) {
             };
         })
     );
-    
-    return enrichedDocs;
+    return { items: enrichedDocs, total };
 }
 
 /**
