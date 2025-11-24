@@ -60,10 +60,20 @@ export const authController = {
 
   getAllUsers: async (req, res, next) => {
     try {
-      const users = await getAllUsers();
+      const { limit = 50, offset = 0, search = '', role = '', orgId = '' } = req.query;
+      const parsedLimit = Math.max(1, Math.min(parseInt(limit, 10) || 50, 100));
+      const parsedOffset = Math.max(0, parseInt(offset, 10) || 0);
+      const { users, total } = await getAllUsers({
+        limit: parsedLimit,
+        offset: parsedOffset,
+        search,
+        role,
+        orgId,
+      });
       res.json({
         success: true,
         users,
+        total,
       });
     } catch (err) {
       next(err);
