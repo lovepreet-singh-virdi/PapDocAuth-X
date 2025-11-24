@@ -95,29 +95,67 @@ Quick links
 - Admin analytics: `GET /api/analytics/summary` (requires admin/superadmin)
 --
 
-Quick start (developer)
 
-Prerequisites
+## ⚡ Quick Start (Developer Onboarding)
+
+### 1. Prerequisites
 - Node.js 18 or later
-- PostgreSQL
-- MongoDB
+- PostgreSQL (v15+ recommended)
+- MongoDB (v6+ recommended)
 
-Install dependencies
-
+### 2. Install Dependencies
 ```powershell
 cd PapDocAuthX-Backend
 npm install
 ```
 
-Configuration
+### 3. Environment Configuration
+Copy `.env.example` to `.env` and fill in required values:
+```powershell
+cp .env.example .env
+# (or manually copy on Windows)
+```
+Set at least:
+- PostgreSQL connection details
+- MongoDB URI
+- JWT_SECRET (32+ chars)
 
-Copy `.env.example` to `.env` (if present) and set the required values. At a minimum provide connection strings for Postgres and MongoDB and a `JWT_SECRET`.
+### 4. Database Migrations (Automated)
+Run all SQL migrations in order:
+```powershell
+npm run migrate:all
+# Or run individual migration scripts as needed (see package.json)
+```
+If you see enum errors (e.g., missing 'VERIFIED'), run:
+```powershell
+npm run migrate:add-verified-enum
+```
 
-Start (development)
+### 5. Seed Initial Data
+```powershell
+npm run seed
+```
 
+### 6. Start the Development Server
 ```powershell
 npm run dev
 ```
+
+---
+**Tip:** For a full reset (drop/recreate/seed), use:
+```powershell
+node scripts/setup-fresh-db.js
+```
+---
+
+### 7. Health Check
+```powershell
+curl http://localhost:4000/api/health
+```
+
+---
+**All migration and setup scripts are now automated and documented in package.json.**
+---
 
 Smoke checks
 
